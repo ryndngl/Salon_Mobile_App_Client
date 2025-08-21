@@ -198,16 +198,7 @@ const ServiceDetailScreen = () => {
 
   // DEBUGGING: Add this function para ma-check mo yung data structure
   const debugServiceData = () => {
-    console.log('🔍 SERVICE DEBUG INFO:');
-    console.log('Service name:', service?.name);
-    console.log('Service styles count:', service?.styles?.length);
-    
     if (service?.styles?.length > 0) {
-      console.log('First style:', service.styles[0]);
-      console.log('First style image:', service.styles[0].image);
-      console.log('First style images array:', service.styles[0].images);
-      console.log('First style imageKey:', service.styles[0].imageKey);
-      console.log('First style imageKeys:', service.styles[0].imageKeys);
     }
   };
 

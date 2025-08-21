@@ -1,4 +1,3 @@
-// screens/RegisterScreen.js
 import { useState } from "react";
 import {
   StyleSheet,
@@ -12,11 +11,6 @@ import {
   Platform,
   Image,
 } from "react-native";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
 
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
@@ -25,27 +19,21 @@ export default function RegisterScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false); // ðŸ‘ˆ NEW: State for the checkbox
-
-  const auth = getAuth();
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleRegister = async () => {
-    // Check if all fields are filled
     if (!fullName || !email || !password || !confirmPassword) {
       Alert.alert("Error", "Please fill in all required information.");
       return;
     }
-    // Check if passwords match
     if (password !== confirmPassword) {
       Alert.alert("Error", "Password and confirmation password do not match.");
       return;
     }
-    // Check password length
     if (password.length < 6) {
       Alert.alert("Error", "Password must be at least 6 characters long.");
       return;
     }
-    // ðŸ‘ˆ NEW: Check if the user agreed to the terms
     if (!agreedToTerms) {
       Alert.alert(
         "Error",
@@ -55,22 +43,23 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      // Update displayName with full name
-      await updateProfile(userCredential.user, {
-        displayName: fullName,
+      const response = await fetch("http://192.168.100.6:5000/api/auth/sign-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          email,
+          password,
+        }),
       });
 
-      Alert.alert(
-        "Success",
-        `Welcome, ${fullName}! Your account has been created.`
-      );
-      console.log("User registered:", userCredential.user.email);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      Alert.alert("Success", `Welcome, ${fullName}! Your account has been created.`);
       navigation.navigate("Login");
     } catch (error) {
       Alert.alert("Registration Error", error.message);
@@ -169,7 +158,7 @@ export default function RegisterScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {/* ðŸ‘ˆ NEW: Checkbox for Terms and Conditions */}
+            {/* Checkbox */}
             <TouchableOpacity
               style={styles.checkboxContainer}
               onPress={() => setAgreedToTerms(!agreedToTerms)}
@@ -188,18 +177,15 @@ export default function RegisterScreen({ navigation }) {
                   style={styles.linkText}
                   onPress={() => navigation.navigate("TermsConditions")}
                 >
-                  {" "}
-                  Terms and Conditions{" "}
+                  {" "}Terms and Conditions{" "}
                 </Text>
                 and
                 <Text
                   style={styles.linkText}
                   onPress={() => navigation.navigate("PrivacyPolicy")}
                 >
-                  {" "}
-                  Privacy Policy{" "}
-                </Text>
-                .
+                  {" "}Privacy Policy{" "}
+                </Text>.
               </Text>
             </TouchableOpacity>
 

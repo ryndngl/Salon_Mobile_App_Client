@@ -19,8 +19,8 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import services from "../data/servicesData";
 import BigServiceCard from "../components/cards/BigServiceCard";
-import { getAuth } from "firebase/auth";
 import { useFavorites } from "../context/FavoritesContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -31,7 +31,7 @@ const HomeScreen = () => {
   // All state variables properly defined
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState("Guest");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -50,9 +50,30 @@ const HomeScreen = () => {
 
   // Effects
   useEffect(() => {
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    setDisplayName(currentUser?.displayName || "Boss");
+    const loadUserData = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          
+          // Extract full name from different possible fields
+          const userName = userObj.fullName || userObj.name || userObj.displayName;
+          
+          if (userName) {
+            // Use the full name instead of just first name
+            setDisplayName(userName);
+          } else {
+            setDisplayName("User");
+          }
+        } else {
+          setDisplayName("Guest");
+        }
+      } catch (error) {
+        setDisplayName("Guest");
+      }
+    };
+
+    loadUserData();
 
     // Load services from local data
     setServicesData(services);

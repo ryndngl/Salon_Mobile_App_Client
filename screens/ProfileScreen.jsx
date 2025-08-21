@@ -10,12 +10,14 @@ import {
   ScrollView,
   Switch,
   StyleSheet,
-  TextInput
+  TextInput,
+  Alert
 } from "react-native";
-import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFavorites } from '../context/FavoritesContext';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -27,38 +29,104 @@ export default function ProfileScreen() {
   const [promos, setPromos] = useState(false);
   const { favorites } = useFavorites();
   const [user, setUser] = useState({
-    uid: null,
-    name: "",
+    _id: null,
+    fullName: "",
     email: "",
     phone: "",
     photo: "",
   });
   const [phoneEditable, setPhoneEditable] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser({
-          uid: currentUser.uid,
-          name: currentUser.displayName || "No Name",
-          email: currentUser.email || "No Email",
-          phone: "",
-          photo: currentUser.photoURL || "",
-        });
-      }
-    });
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        const storedUser = await AsyncStorage.getItem("user");
+        const storedToken = await AsyncStorage.getItem("token");
+        
+        if (storedUser && storedToken) {
+          const userObj = JSON.parse(storedUser);
+          
+          // Set user data from stored info first
+          setUser({
+            _id: userObj.id || userObj._id,
+            fullName: userObj.fullName || userObj.name || "",
+            email: userObj.email || "",
+            phone: userObj.phone || "",
+            photo: userObj.photo || userObj.profilePicture || "",
+          });
 
-    return () => unsubscribe();
+          // Try to fetch fresh data if we have an ID
+          if (userObj.id || userObj._id) {
+            try {
+              const userId = userObj.id || userObj._id;
+              const response = await axios.get(
+                `http://192.168.100.6:5000/api/users/${userId}`, 
+                {
+                  headers: { Authorization: `Bearer ${storedToken}` }
+                }
+              );
+              
+              // Update with fresh data from server
+              setUser(prevUser => ({
+                ...prevUser,
+                ...response.data,
+                _id: response.data.id || response.data._id,
+                fullName: response.data.fullName || response.data.name || prevUser.fullName,
+              }));
+            } catch (fetchError) {
+          }
+        }
+      } else {
+          console.log("No stored user or token found");
+        }
+      } catch (fetchErrror) {
+        console.error("Failed to load user info:", error);
+        Alert.alert("Error", "Failed to load user information");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
   }, []);
+
+  const handleUpdatePhone = async () => {
+    if (!user.phone.trim()) {
+      Alert.alert("Error", "Please enter a valid phone number");
+      return;
+    }
+
+    try {
+      const storedToken = await AsyncStorage.getItem("token");
+      if (storedToken && user._id) {
+        await axios.put(
+          `http://192.168.100.6:5000/api/users/${user._id}`,
+          { phone: user.phone },
+          { headers: { Authorization: `Bearer ${storedToken}` } }
+        );
+        
+        // Update stored user data
+        const updatedUser = { ...user, phone: user.phone };
+        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+        
+        Alert.alert("Success", "Phone number updated successfully");
+      }
+      setPhoneEditable(false);
+    } catch (error) {
+      console.error("Failed to update phone:", error);
+      Alert.alert("Error", "Failed to update phone number");
+    }
+  };
 
   const confirmLogout = () => setConfirmVisible(true);
 
   const handleLogout = async () => {
     setConfirmVisible(false);
-    const auth = getAuth();
     try {
-      await signOut(auth);
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
 
       setLogoutSuccessVisible(true);
       scaleAnim.setValue(0.5);
@@ -81,6 +149,7 @@ export default function ProfileScreen() {
     }
   };
 
+  // --- Rest of your arrays and menuSections remain unchanged ---
   const pastBookings = [
     { service: 'Hair Cut', date: 'Jan 25, 2025' },
     { service: 'Soft Gel', date: 'Jan 10, 2025' },
@@ -141,6 +210,14 @@ export default function ProfileScreen() {
     }
   ];
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <>
       <View style={styles.container}>
@@ -170,8 +247,8 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <View style={styles.profileInfo}>
-                <Text style={styles.userName}>{user.name}</Text>
-                <Text style={styles.userEmail}>{user.email}</Text>
+                <Text style={styles.userName}>{user.fullName || "No name"}</Text>
+                <Text style={styles.userEmail}>{user.email || "No email"}</Text>
                 {phoneEditable ? (
                   <TextInput
                     style={styles.phoneInput}
@@ -188,8 +265,13 @@ export default function ProfileScreen() {
                 )}
               </View>
             </View>
-            <TouchableOpacity style={styles.editButton} onPress={() => setPhoneEditable(!phoneEditable)}>
-              <Text style={styles.editButtonText}>{phoneEditable ? "Save Phone" : "Edit Profile"}</Text>
+            <TouchableOpacity 
+              style={styles.editButton} 
+              onPress={phoneEditable ? handleUpdatePhone : () => setPhoneEditable(true)}
+            >
+              <Text style={styles.editButtonText}>
+                {phoneEditable ? "Save Phone" : "Edit Profile"}
+              </Text>
             </TouchableOpacity>
           </View>
 

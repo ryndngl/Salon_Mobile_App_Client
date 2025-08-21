@@ -1,43 +1,35 @@
-// screens/LoginScreen.js 
-import { useState, useRef, useEffect } from "react";
+// LoginScreen.jsx
+import React, { useState, useRef, useEffect } from "react";
 import {
-  StyleSheet,
-  Text,
   View,
+  Text,
   TextInput,
   TouchableOpacity,
+  StyleSheet,
   Alert,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
-  Image,
   ActivityIndicator,
   Modal,
   Pressable,
   Animated,
   Easing,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
-// Firebase imports
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from "firebase/auth";
+export default function LoginScreen() {
+  const navigation = useNavigation();
 
-export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
-  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  // Animation for login success
   const [loginSuccessVisible, setLoginSuccessVisible] = useState(false);
-
-  // Animation refs
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -62,93 +54,57 @@ export default function LoginScreen({ navigation }) {
     }
   }, [loginSuccessVisible]);
 
-  const auth = getAuth();
-
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please enter your email and password.");
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
-    setIsLoggingIn(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      console.log("User logged in:", user.email);
-      setLoginSuccessVisible(true);
-      setTimeout(() => {
-        setLoginSuccessVisible(false);
-        navigation.replace("MainTabs");
-      }, 2000);
-    } catch (error) {
-      let userFriendlyMessage = "An unexpected error occurred. Please try again.";
-      switch (error.code) {
-        case "auth/invalid-credential":
-        case "auth/user-not-found":
-        case "auth/wrong-password":
-          userFriendlyMessage = "Incorrect email or password.";
-          break;
-        case "auth/user-disabled":
-          userFriendlyMessage = "Your account has been disabled.";
-          break;
-        case "auth/invalid-email":
-          userFriendlyMessage = "The email address is invalid.";
-          break;
-        case "auth/network-request-failed":
-          userFriendlyMessage = "No internet connection.";
-          break;
-        default:
-          userFriendlyMessage = "Login failed. " + error.message;
+      setLoading(true);
+      const response = await fetch(
+        "http://192.168.100.6:5000/api/auth/sign-in",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.isSuccess && data.token) {
+        await AsyncStorage.setItem("token", data.token);
+        
+        // Ensure user data has all necessary fields
+        const userData = {
+          id: data.user._id || data.user.id,
+          _id: data.user._id || data.user.id,
+          fullName: data.user.fullName || data.user.name,
+          name: data.user.fullName || data.user.name, // fallback
+          email: data.user.email,
+          phone: data.user.phone || "",
+          photo: data.user.photo || data.user.profilePicture || "",
+          ...data.user // Include any other fields from backend
+        };
+        
+        await AsyncStorage.setItem("user", JSON.stringify(userData));
+
+        setLoginSuccessVisible(true);
+        setTimeout(() => {
+          setLoginSuccessVisible(false);
+          navigation.replace("MainTabs");
+        }, 2000);
+      } else {
+        Alert.alert("Login Failed", data.message || "Something went wrong");
       }
-      Alert.alert("Login Error", userFriendlyMessage);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleRegisterRedirect = () => {
-    navigation.navigate("Register");
-  };
-
-  const handleForgotPassword = () => {
-    setShowForgotPasswordModal(true);
-    setForgotPasswordEmail(email);
-  };
-
-  const sendResetEmail = async () => {
-    if (!forgotPasswordEmail) {
-      Alert.alert("Error", "Please enter your email address.");
-      return;
-    }
-
-    setIsSendingPasswordReset(true);
-    try {
-      await sendPasswordResetEmail(auth, forgotPasswordEmail);
-      Alert.alert("Password Reset", `A reset link was sent to ${forgotPasswordEmail}`);
-      setShowForgotPasswordModal(false);
-      setForgotPasswordEmail("");
     } catch (error) {
-      let userFriendlyMessage = "Failed to send password reset email.";
-      switch (error.code) {
-        case "auth/invalid-email":
-          userFriendlyMessage = "The email address is not valid.";
-          break;
-        case "auth/user-not-found":
-          userFriendlyMessage = "No user found with this email.";
-          break;
-        case "auth/network-request-failed":
-          userFriendlyMessage = "No internet connection.";
-          break;
-        default:
-          userFriendlyMessage = `Error: ${error.message}`;
-      }
-      Alert.alert("Password Reset Error", userFriendlyMessage);
+      Alert.alert("Error", "Network error. Please try again.");
+      console.error("Login Error:", error);
     } finally {
-      setIsSendingPasswordReset(false);
+      setLoading(false);
     }
   };
-
-  const anyLoading = isLoggingIn || isSendingPasswordReset;
 
   return (
     <KeyboardAvoidingView
@@ -156,7 +112,9 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ImageBackground
-        source={{ uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background" }}
+        source={{
+          uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background",
+        }}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -172,7 +130,7 @@ export default function LoginScreen({ navigation }) {
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
-              editable={!anyLoading}
+              editable={!loading}
             />
 
             <View style={styles.passwordInputContainer}>
@@ -183,12 +141,12 @@ export default function LoginScreen({ navigation }) {
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
-                editable={!anyLoading}
+                editable={!loading}
               />
               <TouchableOpacity
                 style={styles.togglePasswordButton}
                 onPress={() => setShowPassword(!showPassword)}
-                disabled={anyLoading}
+                disabled={loading}
               >
                 <Ionicons
                   name={showPassword ? "eye-outline" : "eye-off-outline"}
@@ -199,9 +157,11 @@ export default function LoginScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-              onPress={handleForgotPassword}
+              onPress={() =>
+                Alert.alert("Forgot Password", "Feature coming soon!")
+              }
               style={styles.forgotPasswordButton}
-              disabled={anyLoading}
+              disabled={loading}
             >
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
@@ -209,18 +169,18 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               style={styles.button}
               onPress={handleLogin}
-              disabled={anyLoading}
+              disabled={loading}
             >
-              {isLoggingIn ? (
+              {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Log In</Text>
+                <Text style={styles.buttonText}>Login</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={handleRegisterRedirect}
-              disabled={anyLoading}
+              onPress={() => navigation.navigate("Register")}
+              disabled={loading}
             >
               <Text style={styles.registerText}>
                 Don't have an account?{" "}
@@ -231,59 +191,12 @@ export default function LoginScreen({ navigation }) {
         </View>
       </ImageBackground>
 
-      {/* Forgot Password Modal */}
+      {/* Login Success Modal */}
       <Modal
-        animationType="fade"
+        animationType="none"
         transparent={true}
-        visible={showForgotPasswordModal}
-        onRequestClose={() => setShowForgotPasswordModal(false)}
+        visible={loginSuccessVisible}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowForgotPasswordModal(false)}
-        >
-          <View
-            style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={styles.modalTitle}>Reset Password</Text>
-            <Text style={styles.modalDescription}>
-              Enter your email address to receive a password reset link.
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor="#888"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={forgotPasswordEmail}
-              onChangeText={setForgotPasswordEmail}
-              editable={!isSendingPasswordReset}
-            />
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={sendResetEmail}
-              disabled={isSendingPasswordReset}
-            >
-              {isSendingPasswordReset ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalCancelButton]}
-              onPress={() => setShowForgotPasswordModal(false)}
-              disabled={isSendingPasswordReset}
-            >
-              <Text style={styles.modalCancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Login Success Modal with Animation */}
-      <Modal animationType="none" transparent={true} visible={loginSuccessVisible}>
         <View style={styles.successModalContainer}>
           <Animated.View
             style={[
@@ -291,9 +204,10 @@ export default function LoginScreen({ navigation }) {
               { transform: [{ scale: scaleAnim }], opacity: fadeAnim },
             ]}
           >
-            <Image
-              source={{ uri: "https://img.icons8.com/color/96/ok--v1.png" }}
-              style={{ width: 60, height: 60 }}
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={60}
+              color="#006600"
             />
             <Text style={styles.successText}>Login Successful</Text>
             <Text style={styles.successSubText}>Redirecting...</Text>
@@ -305,7 +219,11 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FCE4EC" },
+  container: {
+    flex: 1,
+    backgroundColor: "#FCE4EC",
+  },
+
   backgroundImage: {
     flex: 1,
     justifyContent: "center",
@@ -313,6 +231,7 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+
   overlay: {
     flex: 1,
     width: "100%",
@@ -321,6 +240,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+
   card: {
     width: "90%",
     maxWidth: 400,
@@ -331,6 +251,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     alignItems: "center",
   },
+
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -338,6 +259,7 @@ const styles = StyleSheet.create({
     color: "#d13f3f",
     textAlign: "center",
   },
+
   input: {
     width: "100%",
     height: 55,
@@ -350,6 +272,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+
   passwordInputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -362,6 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F8F8",
     paddingRight: 10,
   },
+
   passwordInputField: {
     flex: 1,
     height: "100%",
@@ -369,13 +293,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
-  togglePasswordButton: { padding: 5 },
-  forgotPasswordButton: { alignSelf: "flex-end", marginBottom: 20 },
+
+  togglePasswordButton: {
+    padding: 5,
+  },
+
+  forgotPasswordButton: {
+    alignSelf: "flex-end",
+    marginBottom: 20,
+  },
+
   forgotPasswordText: {
     color: "#d13f3f",
     fontSize: 14,
     textDecorationLine: "underline",
   },
+
   button: {
     width: "100%",
     height: 55,
@@ -387,78 +320,34 @@ const styles = StyleSheet.create({
     borderColor: "#4CAF50",
     elevation: 3,
   },
+
   buttonText: {
     color: "#fff",
     fontSize: 19,
     fontWeight: "bold",
     letterSpacing: 0.5,
   },
-  registerText: { color: "#666", fontSize: 15, marginTop: 10 },
+
+  registerText: {
+    color: "#666",
+    fontSize: 15,
+    marginTop: 10,
+    textAlign: "center",
+  },
+
   registerLink: {
     color: "#d13f3f",
     fontWeight: "bold",
     textDecorationLine: "underline",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    width: "85%",
-    maxWidth: 350,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 25,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 15,
-    color: "#d13f3f",
-  },
-  modalDescription: {
-    fontSize: 15,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  modalButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#4CAF50",
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-    borderColor: "#4CAF50",
-    elevation: 2,
-  },
-  modalCancelButton: {
-    backgroundColor: "#E0E0E0",
-    shadowColor: "transparent",
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: "#CCC",
-  },
-  modalCancelButtonText: {
-    color: "#666",
-    fontSize: 17,
-    fontWeight: "bold",
-  },
+
   successModalContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
+
   successCard: {
     backgroundColor: "#FAFAFA",
     paddingVertical: 38,
@@ -469,6 +358,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EEE",
   },
+
   successText: {
     fontSize: 24,
     fontWeight: "600",
@@ -477,6 +367,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.5,
   },
+
   successSubText: {
     fontSize: 15,
     color: "#888",
