@@ -1,17 +1,44 @@
 // context/FavoritesContext.js
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from './AuthContext';
 
 const FavoritesContext = createContext();
 
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
 
-  // Enhanced load function with error boundary
-  const loadFavorites = async () => {
+  // Get user-specific storage key
+  const getFavoritesKey = () => {
+    if (isAuthenticated && (user?.id || user?._id)) {
+      const userId = user.id || user._id;
+      return `favorites_${userId}`;
+    }
+    return null; // No key if not authenticated
+  };
+
+  // Enhanced load function with error boundary and user-specific storage
+  const loadFavorites = async (forceReload = false) => {
     try {
-      const storedFavorites = await AsyncStorage.getItem("favorites");
+      // Don't load if already loading or no user
+      if (isLoading && !forceReload) return;
+      if (!isAuthenticated || !user) {
+        setFavorites([]);
+        return;
+      }
+
+      setIsLoading(true);
+      const favoritesKey = getFavoritesKey();
+      
+      if (!favoritesKey) {
+        setFavorites([]);
+        return;
+      }
+
+      const storedFavorites = await AsyncStorage.getItem(favoritesKey);
+      
       if (storedFavorites) {
         const parsed = JSON.parse(storedFavorites);
         const cleaned = parsed.filter(
@@ -19,36 +46,56 @@ export const FavoritesProvider = ({ children }) => {
         );
         if (cleaned.length !== parsed.length) {
           console.warn(`Cleaned ${parsed.length - cleaned.length} invalid favorites`);
+          // Save cleaned data back
+          await AsyncStorage.setItem(favoritesKey, JSON.stringify(cleaned));
         }
         setFavorites(cleaned);
+        console.log(`Loaded ${cleaned.length} favorites for user:`, user?.email || user?.fullName);
+      } else {
+        setFavorites([]);
+        console.log(`No favorites found for user:`, user?.email || user?.fullName);
       }
     } catch (error) {
       console.error("Favorites load error:", error);
+      setFavorites([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load on mount
-  useEffect(() => {
-    loadFavorites();
-  }, []);
-
-  // Auto-save with debounce
-  useEffect(() => {
-    if (isLoading) return;
-    
-    const save = async () => {
-      try {
-        await AsyncStorage.setItem("favorites", JSON.stringify(favorites));
-      } catch (error) {
-        console.error("Favorites save error:", error);
+  // Save favorites to user-specific storage immediately
+  const saveFavorites = async (favoritesData) => {
+    try {
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated, cannot save favorites');
+        return false;
       }
-    };
-    
-    const timer = setTimeout(save, 500);
-    return () => clearTimeout(timer);
-  }, [favorites, isLoading]);
+
+      const favoritesKey = getFavoritesKey();
+      if (!favoritesKey) {
+        console.log('No favorites key, cannot save');
+        return false;
+      }
+
+      await AsyncStorage.setItem(favoritesKey, JSON.stringify(favoritesData));
+      console.log(`Saved ${favoritesData.length} favorites for user:`, user?.email || user?.fullName);
+      return true;
+    } catch (error) {
+      console.error("Favorites save error:", error);
+      return false;
+    }
+  };
+
+  // Load favorites when user authentication status changes
+  useEffect(() => {
+    if (isAuthenticated && user && (user.id || user._id)) {
+      console.log('User authenticated, loading favorites...');
+      loadFavorites(true); // Force reload when user changes
+    } else if (!isAuthenticated) {
+      console.log('User not authenticated, clearing favorites...');
+      setFavorites([]);
+    }
+  }, [isAuthenticated, user?.id, user?._id, user?.email]);
 
   // Unified item identification
   const getItemKey = (service, style) => {
@@ -59,11 +106,18 @@ export const FavoritesProvider = ({ children }) => {
     return `${service.name}|${style.name}`.toLowerCase();
   };
 
-  // Robust toggle function
-  const toggleFavorite = (service, style) => {
+  // Robust toggle function with immediate save
+  const toggleFavorite = async (service, style) => {
     try {
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated, cannot toggle favorite');
+        return false;
+      }
+
       const key = getItemKey(service, style);
-      if (!key) return
+      if (!key) return false;
+      
+      let updatedFavorites;
       
       setFavorites(prev => {
         const exists = prev.some(item => 
@@ -71,26 +125,36 @@ export const FavoritesProvider = ({ children }) => {
         );
 
         if (exists) {
-          return prev.filter(item => 
+          updatedFavorites = prev.filter(item => 
             getItemKey(item.service, item) !== key
           );
+          console.log(`Removed ${service.name} - ${style.name} from favorites`);
         } else {
-          return [...prev, { 
+          updatedFavorites = [...prev, { 
             ...style, 
             service,
-            timestamp: new Date().toISOString() 
+            timestamp: new Date().toISOString(),
+            userId: user?.id || user?._id
           }];
+          console.log(`Added ${service.name} - ${style.name} to favorites`);
         }
+        
+        // Save immediately after updating
+        saveFavorites(updatedFavorites);
+        
+        return updatedFavorites;
       });
+      
+      return true;
     } catch (error) {
-    } finally {
+      console.error('Toggle favorite error:', error);
+      return false;
     }
   };
 
   // Optimized check
   const isFavorite = (serviceName, styleName) => {
-    if (!serviceName || !styleName) {
-      console.warn("Invalid check:", { serviceName, styleName });
+    if (!serviceName || !styleName || !isAuthenticated) {
       return false;
     }
 
@@ -100,14 +164,90 @@ export const FavoritesProvider = ({ children }) => {
     );
   };
 
+  // Add to favorites function
+  const addToFavorites = async (service, style) => {
+    if (!isAuthenticated || !user) return false;
+    
+    const key = getItemKey(service, style);
+    if (!key) return false;
+    
+    const exists = favorites.some(item => 
+      getItemKey(item.service, item) === key
+    );
+    
+    if (!exists) {
+      await toggleFavorite(service, style);
+      return true;
+    }
+    return false;
+  };
+
+  // Remove from favorites function
+  const removeFromFavorites = async (service, style) => {
+    if (!isAuthenticated || !user) return false;
+    
+    const key = getItemKey(service, style);
+    if (!key) return false;
+    
+    const exists = favorites.some(item => 
+      getItemKey(item.service, item) === key
+    );
+    
+    if (exists) {
+      await toggleFavorite(service, style);
+      return true;
+    }
+    return false;
+  };
+
+  // Clear all favorites for current user
+  const clearFavorites = async () => {
+    try {
+      if (!isAuthenticated || !user) return false;
+      
+      setFavorites([]);
+      const favoritesKey = getFavoritesKey();
+      
+      if (favoritesKey) {
+        await AsyncStorage.removeItem(favoritesKey);
+        console.log(`Cleared all favorites for user:`, user?.email || user?.fullName);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Clear favorites error:', error);
+      return false;
+    }
+  };
+
+  // Get favorites by service
+  const getFavoritesByService = (serviceName) => {
+    if (!isAuthenticated) return [];
+    
+    return favorites.filter(item => 
+      item.service?.name?.toLowerCase() === serviceName?.toLowerCase()
+    );
+  };
+
+  // Force refresh favorites from storage
+  const refreshFavorites = () => {
+    return loadFavorites(true);
+  };
+
   // Context value
   const value = {
     favorites,
     toggleFavorite,
     isFavorite,
     isLoading,
-    refreshFavorites: loadFavorites,
-    count: favorites.length
+    refreshFavorites,
+    count: favorites.length,
+    addToFavorites,
+    removeFromFavorites,
+    clearFavorites,
+    getFavoritesByService,
+    isAuthenticated,
+    user: user ? { id: user.id || user._id, email: user.email || user.fullName } : null,
   };
 
   return (

@@ -12,6 +12,9 @@ import {
   ImageBackground,
   StatusBar,
   LogBox,
+  View,
+  Text,
+  ActivityIndicator,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -29,6 +32,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 // Context
 import { BookingProvider } from "./context/BookingContext";
 import { FavoritesProvider } from "./context/FavoritesContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Screens
 import LoginScreen from "./screens/LoginScreen";
@@ -55,31 +59,142 @@ import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 const Stack = createNativeStackNavigator();
 const { width, height } = Dimensions.get("window");
 
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [isAppReady, setIsAppReady] = useState(false);
+// Auth Navigator Component
+const AuthNavigator = () => {
+  const {
+    isAuthenticated,
+    isLoading,
+    isFirstTime,
+    showSplashOnLogout,
+    setShowSplashOnLogout,
+  } = useAuth();
+
   const splashFadeOut = useRef(new Animated.Value(1)).current;
-  const [showGetStarted, setShowGetStarted] = useState(true);
 
+  // Handle splash screen for logout
   useEffect(() => {
-    let splashTimer;
-    let appLoadCompleted = false;
+    if (showSplashOnLogout) {
+      splashFadeOut.setValue(1);
 
-    const checkAppReadiness = () => {
-      if (appLoadCompleted) {
+      const timer = setTimeout(() => {
         Animated.timing(splashFadeOut, {
           toValue: 0,
           duration: 800,
           useNativeDriver: true,
         }).start(() => {
-          setIsAppReady(true);
+          setShowSplashOnLogout(false);
         });
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSplashOnLogout]);
+
+  // Loading screen habang chine-check yung auth status
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ImageBackground
+          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
+          style={styles.backgroundImage}
+          imageStyle={styles.backgroundImageStyle}
+        >
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#d13f3f" />
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        </ImageBackground>
+      </View>
+    );
+  }
+
+  // Show splash screen on logout
+  if (showSplashOnLogout) {
+    return (
+      <Animated.View
+        style={[styles.splashContainer, { opacity: splashFadeOut }]}
+      >
+        <ImageBackground
+          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
+          style={styles.backgroundImage}
+          imageStyle={styles.backgroundImageStyle}
+        />
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Stack.Navigator
+      initialRouteName={
+        isAuthenticated
+          ? "MainTabs"
+          : isFirstTime
+          ? "GetStarted"
+          : "Login"
       }
-    };
+      screenOptions={{
+        headerShown: false,
+        animation: "none",   
+      }}
+    >
+      {!isAuthenticated ? (
+        <>
+          <Stack.Screen name="GetStarted" component={GetStartedScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+          <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
+          <Stack.Screen name="ServiceDetailScreen" component={ServiceDetailScreen} />
+          <Stack.Screen name="BookingScreen" component={BookingScreen} />
+          <Stack.Screen
+            name="BookingFormScreen"
+            component={BookingFormScreen}
+            options={{ title: "Booking Details", headerShown: true }}
+          />
+          <Stack.Screen name="BookingSummaryScreen" component={BookingSummaryScreen} />
+          <Stack.Screen name="PaymentMethodScreen" component={PaymentMethodScreen} />
+          <Stack.Screen
+            name="NotificationScreen"
+            component={NotificationScreen}
+            options={{ title: "Notifications", headerShown: true }}
+          />
+          <Stack.Screen
+            name="BookingConfirmationScreen"
+            component={BookingConfirmationScreen}
+          />
+          <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
+          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+
+          {/* Help & Support Screens */}
+          <Stack.Screen name="FAQs" component={FAQScreen} />
+          <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+          <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+};
+
+// Main App Component
+const AppContent = () => {
+  const [isAppReady, setIsAppReady] = useState(false);
+  const splashFadeOut = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let splashTimer;
 
     splashTimer = setTimeout(() => {
-      appLoadCompleted = true;
-      checkAppReadiness();
+      Animated.timing(splashFadeOut, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsAppReady(true);
+      });
     }, 2000);
 
     return () => {
@@ -102,118 +217,34 @@ export default function App() {
   }
 
   return (
+    <BookingProvider>
+      <FavoritesProvider>
+        <NavigationContainer>
+          <AuthNavigator />
+          <StatusBar style="dark" />
+          <Toast />
+        </NavigationContainer>
+      </FavoritesProvider>
+    </BookingProvider>
+  );
+};
+
+// Root App Component
+export default function App() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <BookingProvider>
-        <FavoritesProvider>
-          <NavigationContainer>
-            <Stack.Navigator
-              initialRouteName={"GetStarted"}
-            >
-              <Stack.Screen
-                name="GetStarted"
-                component={GetStartedScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Login"
-                component={LoginScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Register"
-                component={RegisterScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="MainTabs"
-                component={BottomTabNavigator}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ServicesScreen"
-                component={ServicesScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ServiceDetailScreen"
-                component={ServiceDetailScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="BookingScreen"
-                component={BookingScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="BookingFormScreen"
-                component={BookingFormScreen}
-                options={{ title: "Booking Details" }}
-              />
-              <Stack.Screen
-                name="BookingSummaryScreen"
-                component={BookingSummaryScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="PaymentMethodScreen"
-                component={PaymentMethodScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="NotificationScreen"
-                component={NotificationScreen}
-                options={{ title: "Notifications" }}
-              />
-              <Stack.Screen
-                name="BookingConfirmationScreen"
-                component={BookingConfirmationScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="FavoritesScreen"
-                component={FavoritesScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="SettingsScreen"
-                component={SettingsScreen}
-                options={{ headerShown: false }}
-              />
-
-              {/* Help & Support Screens */}
-              <Stack.Screen
-                name="FAQs"
-                component={FAQScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="ContactUs"
-                component={ContactUsScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="TermsConditions"
-                component={TermsConditionsScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="PrivacyPolicy"
-                component={PrivacyPolicyScreen}
-                options={{ headerShown: false }}
-              />
-            </Stack.Navigator>
-
-            <StatusBar style="dark" />
-            <Toast />
-          </NavigationContainer>
-        </FavoritesProvider>
-      </BookingProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   splashContainer: {
+    flex: 1,
+  },
+  loadingContainer: {
     flex: 1,
   },
   backgroundImage: {
@@ -225,5 +256,17 @@ const styles = StyleSheet.create({
   },
   backgroundImageStyle: {
     resizeMode: "cover",
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#d13f3f",
+    fontWeight: "500",
   },
 });

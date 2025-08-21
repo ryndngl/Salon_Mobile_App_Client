@@ -16,18 +16,20 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const { user: authUser, logout, updateUser, isAuthenticated, setShowSplashOnLogout } = useAuth();
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [logoutSuccessVisible, setLogoutSuccessVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [bookingReminders, setBookingReminders] = useState(true);
   const [promos, setPromos] = useState(false);
-  const { favorites } = useFavorites();
+  const { favorites, refreshFavorites, count: favoritesCount } = useFavorites();
   const [user, setUser] = useState({
     _id: null,
     fullName: "",
@@ -36,61 +38,98 @@ export default function ProfileScreen() {
     photo: "",
   });
   const [phoneEditable, setPhoneEditable] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
+  // Initialize user data from AuthContext
   useEffect(() => {
-    const fetchUser = async () => {
+    const initializeUserData = async () => {
       try {
-        setLoading(true);
-        const storedUser = await AsyncStorage.getItem("user");
-        const storedToken = await AsyncStorage.getItem("token");
-        
-        if (storedUser && storedToken) {
-          const userObj = JSON.parse(storedUser);
-          
-          // Set user data from stored info first
+        if (!isAuthenticated || !authUser) {
+          // Reset user data if not authenticated
           setUser({
-            _id: userObj.id || userObj._id,
-            fullName: userObj.fullName || userObj.name || "",
-            email: userObj.email || "",
-            phone: userObj.phone || "",
-            photo: userObj.photo || userObj.profilePicture || "",
+            _id: null,
+            fullName: "",
+            email: "",
+            phone: "",
+            photo: "",
           });
+          setDataLoaded(false);
+          return;
+        }
 
-          // Try to fetch fresh data if we have an ID
-          if (userObj.id || userObj._id) {
-            try {
-              const userId = userObj.id || userObj._id;
+        // Don't re-initialize if already loaded for this user
+        if (dataLoaded && user._id === (authUser.id || authUser._id)) {
+          return;
+        }
+
+        setLoading(true);
+        
+        // Initialize with AuthContext user data
+        const userData = {
+          _id: authUser.id || authUser._id,
+          fullName: authUser.fullName || authUser.name || "",
+          email: authUser.email || "",
+          phone: authUser.phone || "",
+          photo: authUser.photo || authUser.profilePicture || "",
+        };
+        
+        setUser(userData);
+        
+        // Try to fetch fresh data from server
+        if (authUser.id || authUser._id) {
+          try {
+            const userId = authUser.id || authUser._id;
+            const storedToken = await AsyncStorage.getItem("token");
+            
+            if (storedToken) {
               const response = await axios.get(
                 `http://192.168.100.6:5000/api/users/${userId}`, 
                 {
-                  headers: { Authorization: `Bearer ${storedToken}` }
+                  headers: { Authorization: `Bearer ${storedToken}` },
+                  timeout: 5000
                 }
               );
               
               // Update with fresh data from server
-              setUser(prevUser => ({
-                ...prevUser,
-                ...response.data,
+              const freshUserData = {
                 _id: response.data.id || response.data._id,
-                fullName: response.data.fullName || response.data.name || prevUser.fullName,
-              }));
-            } catch (fetchError) {
+                fullName: response.data.fullName || response.data.name || userData.fullName,
+                email: response.data.email || userData.email,
+                phone: response.data.phone || userData.phone || "",
+                photo: response.data.photo || userData.photo || "",
+              };
+              
+              setUser(freshUserData);
+              
+              // Update AuthContext with fresh data if it's different
+              if (JSON.stringify(freshUserData) !== JSON.stringify(userData)) {
+                updateUser(freshUserData);
+              }
+            }
+          } catch (fetchError) {
+            console.warn("Could not fetch fresh user data:", fetchError.message);
+            // Continue with cached data
           }
         }
-      } else {
-          console.log("No stored user or token found");
-        }
-      } catch (fetchErrror) {
-        console.error("Failed to load user info:", error);
+        
+        setDataLoaded(true);
+        
+        // Refresh favorites to ensure they're loaded for this user
+        setTimeout(() => {
+          refreshFavorites();
+        }, 100);
+        
+      } catch (error) {
+        console.error("Failed to initialize user data:", error);
         Alert.alert("Error", "Failed to load user information");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
-  }, []);
+    initializeUserData();
+  }, [isAuthenticated, authUser?.id, authUser?._id, authUser?.email]);
 
   const handleUpdatePhone = async () => {
     if (!user.phone.trim()) {
@@ -104,12 +143,16 @@ export default function ProfileScreen() {
         await axios.put(
           `http://192.168.100.6:5000/api/users/${user._id}`,
           { phone: user.phone },
-          { headers: { Authorization: `Bearer ${storedToken}` } }
+          { 
+            headers: { Authorization: `Bearer ${storedToken}` },
+            timeout: 10000
+          }
         );
         
-        // Update stored user data
-        const updatedUser = { ...user, phone: user.phone };
-        await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+        // Update AuthContext with new phone number
+        const updatedUserData = { ...user, phone: user.phone };
+        await updateUser(updatedUserData);
+        setUser(updatedUserData);
         
         Alert.alert("Success", "Phone number updated successfully");
       }
@@ -125,41 +168,96 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     setConfirmVisible(false);
     try {
-      await AsyncStorage.removeItem("token");
-      await AsyncStorage.removeItem("user");
-
+      // Show logout animation
       setLogoutSuccessVisible(true);
       scaleAnim.setValue(0.5);
       fadeAnim.setValue(0);
+      
       Animated.parallel([
-        Animated.spring(scaleAnim, { toValue: 1, friction: 3, tension: 120, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+        Animated.spring(scaleAnim, { 
+          toValue: 1, 
+          friction: 3, 
+          tension: 120, 
+          useNativeDriver: true 
+        }),
+        Animated.timing(fadeAnim, { 
+          toValue: 1, 
+          duration: 300, 
+          easing: Easing.out(Easing.ease), 
+          useNativeDriver: true 
+        }),
       ]).start();
-      setTimeout(() => {
+
+      // Wait for animation, then logout
+      setTimeout(async () => {
+        // Hide the success modal first
         Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 0, duration: 200, easing: Easing.in(Easing.ease), useNativeDriver: true }),
-          Animated.timing(scaleAnim, { toValue: 0.8, duration: 200, useNativeDriver: true }),
-        ]).start(() => {
+          Animated.timing(fadeAnim, { 
+            toValue: 0, 
+            duration: 200, 
+            easing: Easing.in(Easing.ease), 
+            useNativeDriver: true 
+          }),
+          Animated.timing(scaleAnim, { 
+            toValue: 0.8, 
+            duration: 200, 
+            useNativeDriver: true 
+          }),
+        ]).start(async () => {
           setLogoutSuccessVisible(false);
-          navigation.replace("Login");
+          
+          try {
+            // Set flag to show splash screen after logout
+            setShowSplashOnLogout(true);
+            
+            // This will only clear auth data, not user favorites
+            await logout();
+            
+            // Reset local state
+            setUser({
+              _id: null,
+              fullName: "",
+              email: "",
+              phone: "",
+              photo: "",
+            });
+            setDataLoaded(false);
+            
+          } catch (logoutError) {
+            console.error("Logout failed:", logoutError);
+            Alert.alert("Error", "Failed to logout. Please try again.");
+          }
         });
-      }, 2000);
+      }, 1500);
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("Logout animation failed:", error);
+      // Fallback: direct logout without animation
+      setShowSplashOnLogout(true);
+      await logout();
+      setUser({
+        _id: null,
+        fullName: "",
+        email: "",
+        phone: "",
+        photo: "",
+      });
+      setDataLoaded(false);
     }
   };
 
-  // --- Rest of your arrays and menuSections remain unchanged ---
+  // Sample data - in real app, these should come from API based on user
   const pastBookings = [
     { service: 'Hair Cut', date: 'Jan 25, 2025' },
     { service: 'Soft Gel', date: 'Jan 10, 2025' },
     { service: 'Hair Color', date: 'Dec 28, 2024' },
   ];
+
   const paymentMethods = [
     { name: 'GCash', isDefault: true },
     { name: 'Credit/Debit Card', isDefault: false },
     { name: 'Cash on Service', isDefault: false },
   ];
+
   const [loyaltyPoints, setLoyaltyPoints] = useState(150);
 
   const menuSections = [
@@ -169,7 +267,7 @@ export default function ProfileScreen() {
         {
           key: 'favorites-nav',
           icon: 'favorite',
-          label: `View All Favorites (${favorites.length})`,
+          label: `View All Favorites (${favoritesCount || 0})`,
           onPress: () => navigation.navigate('FavoritesScreen')
         }
       ]
@@ -209,14 +307,6 @@ export default function ProfileScreen() {
       ]
     }
   ];
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
 
   return (
     <>

@@ -17,11 +17,12 @@ import {
   Easing,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
+  const { login, setUser, setIsAuthenticated } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,56 +56,35 @@ export default function LoginScreen() {
   }, [loginSuccessVisible]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+  if (!email || !password) {
+    Alert.alert("Error", "Please fill in all fields");
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const result = await login(email, password);
+
+    if (result.success) {
+      setLoginSuccessVisible(true);
+
+      setTimeout(() => {
+        setLoginSuccessVisible(false);
+        // ✅ dito lang magse-set ng auth state
+        setUser(result.user);
+        setIsAuthenticated(true);
+      }, 2000);
+    } else {
+      Alert.alert("Login Failed", result.message);
     }
-
-    try {
-      setLoading(true);
-      const response = await fetch(
-        "http://192.168.100.6:5000/api/auth/sign-in",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.isSuccess && data.token) {
-        await AsyncStorage.setItem("token", data.token);
-        
-        // Ensure user data has all necessary fields
-        const userData = {
-          id: data.user._id || data.user.id,
-          _id: data.user._id || data.user.id,
-          fullName: data.user.fullName || data.user.name,
-          name: data.user.fullName || data.user.name, // fallback
-          email: data.user.email,
-          phone: data.user.phone || "",
-          photo: data.user.photo || data.user.profilePicture || "",
-          ...data.user // Include any other fields from backend
-        };
-        
-        await AsyncStorage.setItem("user", JSON.stringify(userData));
-
-        setLoginSuccessVisible(true);
-        setTimeout(() => {
-          setLoginSuccessVisible(false);
-          navigation.replace("MainTabs");
-        }, 2000);
-      } else {
-        Alert.alert("Login Failed", data.message || "Something went wrong");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Network error. Please try again.");
-      console.error("Login Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    Alert.alert("Error", "Something went wrong. Please try again.");
+    console.error("Login Error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -318,7 +298,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 25,
     borderColor: "#4CAF50",
-    elevation: 3,
+    elevation: 1,
   },
 
   buttonText: {
