@@ -28,17 +28,28 @@ export const AuthProvider = ({ children }) => {
     try {
       if (showLogs) setIsLoading(true);
       
-      // Check if it's the first time opening the app
-      const hasOpenedBefore = await AsyncStorage.getItem('hasOpenedBefore');
-      if (!hasOpenedBefore) {
-        setIsFirstTime(true);
-        await AsyncStorage.setItem('hasOpenedBefore', 'true');
-      } else {
-        setIsFirstTime(false);
-      }
-      
       const token = await AsyncStorage.getItem('token');
       const userData = await AsyncStorage.getItem('user');
+      const hasEverLoggedIn = await AsyncStorage.getItem('hasEverLoggedIn');
+      
+      // ✅ Determine if first time based on whether user has ever logged in
+      // AND if there's no current valid session
+      if (!hasEverLoggedIn) {
+        // True first time user - never logged in before
+        setIsFirstTime(true);
+        if (showLogs) {
+          console.log('First time user detected');
+        }
+      } else if (!token || !userData) {
+        // User has logged in before but currently logged out
+        setIsFirstTime(false);
+        if (showLogs) {
+          console.log('Returning user (logged out)');
+        }
+      } else {
+        // User has active session
+        setIsFirstTime(false);
+      }
 
       if (token && userData) {
         try {
@@ -122,7 +133,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Token verification failed:', error);
       // For network errors, assume token is still valid to allow offline usage
-      // In production, you might want to be more strict
       return true; // Changed to true to allow offline functionality
     }
   };
@@ -157,6 +167,9 @@ const login = async (email, password) => {
 
       // Save user data
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+      
+      // ✅ Mark that user has ever logged in (for first time detection)
+      await AsyncStorage.setItem('hasEverLoggedIn', 'true');
 
       console.log('Login successful (pending auth):', userData.email || userData.fullName);
 
@@ -190,6 +203,7 @@ const login = async (email, password) => {
       }
       
       // Only clear auth data - NOT user-specific data like favorites
+      // ✅ Keep hasEverLoggedIn so user doesn't see GetStarted again
       await clearAuthData();
       
       // Reset auth state
@@ -209,11 +223,11 @@ const login = async (email, password) => {
     }
   };
 
-  // Clear only auth data (token & user info) - keeps favorites
+  // Clear only auth data (token & user info) - keeps favorites AND hasEverLoggedIn
   const clearAuthData = async () => {
     try {
       await AsyncStorage.multiRemove(['token', 'user']);
-      console.log('Auth data cleared - favorites preserved');
+      console.log('Auth data cleared - favorites and login history preserved');
     } catch (error) {
       console.error('Clear auth data error:', error);
     }
@@ -222,13 +236,13 @@ const login = async (email, password) => {
   // Clear ALL app data (use only for complete app reset)
   const clearAllAppData = async (userId = null) => {
     try {
-      console.warn('CLEARING ALL APP DATA - This will remove favorites!');
+      console.warn('CLEARING ALL APP DATA - This will remove favorites and reset first time!');
       
       // Get all keys first
       const allKeys = await AsyncStorage.getAllKeys();
       
       // Keys to always clear
-      const basicKeysToRemove = ['token', 'user'];
+      const basicKeysToRemove = ['token', 'user', 'hasEverLoggedIn']; // ✅ Include hasEverLoggedIn
       
       // User-specific keys to clear if userId provided
       const userSpecificKeys = [];
@@ -261,7 +275,7 @@ const login = async (email, password) => {
         console.log('Cleared keys:', existingKeysToRemove);
       }
       
-      console.log('All app data cleared');
+      console.log('All app data cleared - app will show GetStarted on next launch');
     } catch (error) {
       console.error('Clear all app data error:', error);
       // Fallback: clear essential data
@@ -317,7 +331,7 @@ const login = async (email, password) => {
     updateUser,
     checkAuthStatus,
     clearAllAppData, // Only for admin/dev use
-     setUser,
+    setUser,
     setIsAuthenticated,
   };
 
