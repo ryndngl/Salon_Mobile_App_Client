@@ -89,7 +89,7 @@ const services = [
       },
       {
         id: 10,
-        name: "Burst Fade",
+        name: "Burst Fade", 
         category: "Men",
         price: 100,
         description:

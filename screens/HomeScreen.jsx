@@ -1,4 +1,4 @@
-// Add these imports at the top
+// HomeScreen.jsx - Updated with backend integration
 import { useState, useEffect } from "react";
 import {
   View,
@@ -17,26 +17,30 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
-import services from "../data/servicesData";
 import BigServiceCard from "../components/cards/BigServiceCard";
 import { useFavorites } from "../context/FavoritesContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const screenWidth = Dimensions.get("window").width;
 
+// API Configuration - Change this to your server URL
+const API_BASE_URL = 'http://192.168.100.6:3000/api'; // Replace with your actual server IP
+// For Android Emulator use: http://10.0.2.2:3000/api
+// For iOS Simulator use: http://localhost:3000/api
+
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  // All state variables properly defined
+  // State variables
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
   const [displayName, setDisplayName] = useState("Guest");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
-
-  // Use local state for services
   const [servicesData, setServicesData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Testimonial states
   const [testimonials, setTestimonials] = useState([]);
@@ -48,6 +52,81 @@ const HomeScreen = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
+  // API Functions
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/services`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setServicesData(data);
+      
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      setError('Failed to load services. Please check your connection.');
+      
+      // Fallback to local data if API fails
+      const fallbackServices = [
+        {
+          _id: "1",
+          name: "Hair Cut",
+          styles: [],
+        },
+        {
+          _id: "2", 
+          name: "Hair Color",
+          styles: [],
+        },
+        // Add other fallback services as needed
+      ];
+      setServicesData(fallbackServices);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchStyles = async (query) => {
+    if (!query.trim()) {
+      setFilteredStyles([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(query)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setFilteredStyles(data);
+      
+    } catch (error) {
+      console.error('Error searching styles:', error);
+      
+      // Fallback to local search if API fails
+      const results = servicesData.flatMap((service) =>
+        (service.styles || [])
+          .filter(
+            (style) =>
+              style.name &&
+              style.name.toLowerCase().includes(query.toLowerCase())
+          )
+          .map((style) => ({
+            ...style,
+            serviceName: service.name,
+          }))
+      );
+      setFilteredStyles(results);
+    }
+  };
+
   // Effects
   useEffect(() => {
     const loadUserData = async () => {
@@ -55,16 +134,8 @@ const HomeScreen = () => {
         const storedUser = await AsyncStorage.getItem("user");
         if (storedUser) {
           const userObj = JSON.parse(storedUser);
-          
-          // Extract full name from different possible fields
           const userName = userObj.fullName || userObj.name || userObj.displayName;
-          
-          if (userName) {
-            // Use the full name instead of just first name
-            setDisplayName(userName);
-          } else {
-            setDisplayName("User");
-          }
+          setDisplayName(userName || "User");
         } else {
           setDisplayName("Guest");
         }
@@ -74,32 +145,12 @@ const HomeScreen = () => {
     };
 
     loadUserData();
-
-    // Load services from local data
-    setServicesData(services);
+    fetchServices();
   }, []);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      if (searchQuery.trim() === "" || servicesData.length === 0) {
-        setFilteredStyles([]);
-        return;
-      }
-
-      const results = servicesData.flatMap((service) =>
-        (service.styles || [])
-          .filter(
-            (style) =>
-              style.name &&
-              style.name.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-          .map((style) => ({
-            ...style,
-            serviceName: service.name,
-          }))
-      );
-
-      setFilteredStyles(results);
+      searchStyles(searchQuery);
     }, 400);
 
     return () => clearTimeout(delayDebounce);
@@ -143,17 +194,64 @@ const HomeScreen = () => {
     },
   ];
 
-  const handleServicePress = (serviceName) => {
-    const selectedService = servicesData.find((s) => s.name === serviceName);
-
-    if (selectedService) {
-      navigation.navigate("ServiceDetailScreen", { service: selectedService });
-    } else {
-      Alert.alert("Service Not Found", "This service is not available yet.");
+  const handleServicePress = async (serviceName) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const selectedService = await response.json();
+      
+      if (selectedService) {
+        navigation.navigate("ServiceDetailScreen", { service: selectedService });
+      } else {
+        Alert.alert("Service Not Found", "This service is not available yet.");
+      }
+      
+    } catch (error) {
+      console.error('Error fetching service:', error);
+      Alert.alert("Error", "Failed to load service details. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Testimonial functions
+  // Image source handler for API images
+  const getImageSource = (imageData) => {
+    if (typeof imageData === 'number') {
+      return imageData; // Local require() image
+    }
+    
+    if (typeof imageData === 'string') {
+      if (imageData.startsWith('/images/') || imageData.startsWith('images/')) {
+        // API image path - construct full URL
+        return { uri: `${API_BASE_URL.replace('/api', '')}/uploads/${imageData.replace('/images/', '').replace('images/', '')}` };
+      }
+      
+      if (imageData.startsWith('http')) {
+        // Full URL
+        return { uri: imageData };
+      }
+    }
+    
+    // Fallback to local images
+    const fallbackImages = {
+      "Hair Cut": require("../assets/OurServicesImage/haircut.webp"),
+      "Hair Color": require("../assets/OurServicesImage/haircolor.webp"),
+      "Hair Treatment": require("../assets/OurServicesImage/hairtreatment.webp"),
+      "Rebond & Forms": require("../assets/OurServicesImage/rebondandforms.webp"),
+      "Nail Care": require("../assets/OurServicesImage/nailcare.webp"),
+      "Foot Spa": require("../assets/OurServicesImage/footspa.webp"),
+    };
+    
+    return fallbackImages["Hair Cut"];
+  };
+
+  // Testimonial functions (keeping your existing code)
   const handleAddTestimonial = () => {
     if (!newTestimonial.name.trim() || !newTestimonial.feedback.trim()) {
       Alert.alert("Error", "Please fill in both name and feedback fields.");
@@ -232,7 +330,7 @@ const HomeScreen = () => {
     setEditingId(null);
   };
 
-  // Render functions
+  // Render functions (keeping your existing render functions)
   const renderTestimonialCard = (item, index) => (
     <View key={index} style={styles.testimonialCard}>
       <View style={styles.testimonialHeader}>
@@ -366,6 +464,22 @@ const HomeScreen = () => {
         </Text>
       </View>
 
+      {/* Show loading or error states */}
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading services...</Text>
+        </View>
+      )}
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={fetchServices} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <Text style={styles.servicesTitle}>Our Services</Text>
       <View style={styles.servicesContainer}>
         {displayServices.map((service, index) => (
@@ -374,6 +488,7 @@ const HomeScreen = () => {
             style={styles.serviceCard}
             onPress={() => handleServicePress(service.name)}
             activeOpacity={0.85}
+            disabled={loading}
           >
             <Image
               source={service.image}
@@ -387,7 +502,7 @@ const HomeScreen = () => {
         ))}
       </View>
 
-      {/* Enhanced Testimonials Section */}
+      {/* Testimonials Section */}
       <View style={styles.testimonialsSection}>
         <View style={styles.testimonialTitleContainer}>
           <Text style={styles.testimonialTitle}>What Our Clients Say</Text>
@@ -439,6 +554,7 @@ const HomeScreen = () => {
             onChangeText={setSearchQuery}
             returnKeyType="search"
             style={styles.searchInput}
+            editable={!loading}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={handleClearSearch}>
@@ -461,7 +577,7 @@ const HomeScreen = () => {
           keyboardShouldPersistTaps="handled"
           data={filteredStyles}
           keyExtractor={(item, index) =>
-            `${item.serviceName}-${item.name}-${index}`
+            `${item.serviceName}-${item.name || item._id}-${index}`
           }
           numColumns={1}
           contentContainerStyle={{
@@ -475,22 +591,9 @@ const HomeScreen = () => {
               .toLowerCase()
               .includes("foot spa");
 
-            // Add fallback images
-            const fallbackImages = {
-              "Hair Cut": require("../assets/OurServicesImage/haircut.webp"),
-              "Hair Color": require("../assets/OurServicesImage/haircolor.webp"),
-              "Hair Treatment": require("../assets/OurServicesImage/hairtreatment.webp"),
-              "Rebond & Forms": require("../assets/OurServicesImage/rebondandforms.webp"),
-              "Nail Care": require("../assets/OurServicesImage/nailcare.webp"),
-              "Foot Spa": require("../assets/OurServicesImage/footspa.webp"),
-            };
-
             const styleWithImage = {
               ...item,
-              image:
-                item.image ||
-                fallbackImages[item.serviceName] ||
-                fallbackImages["Hair Cut"],
+              image: getImageSource(item.image),
             };
 
             return (
@@ -511,9 +614,15 @@ const HomeScreen = () => {
             );
           }}
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: "#888", marginTop: 20 }}>
-              No results found.
-            </Text>
+            loading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Searching...</Text>
+              </View>
+            ) : (
+              <Text style={{ textAlign: "center", color: "#888", marginTop: 20 }}>
+                No results found.
+              </Text>
+            )
           }
         />
       )}
@@ -549,7 +658,45 @@ const HomeScreen = () => {
   );
 };
 
+// Add these new styles to your existing StyleSheet
 const styles = StyleSheet.create({
+  // ... (keep all your existing styles)
+  
+  // Loading and Error states
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  errorContainer: {
+    backgroundColor: "#ffebee",
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: 16,
+    color: "#d32f2f",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  retryButton: {
+    backgroundColor: "#d13f3f",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
   // Main container with padding for the entire screen
   scrollContainer: {
     paddingHorizontal: 16,
