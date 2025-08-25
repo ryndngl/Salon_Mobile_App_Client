@@ -24,7 +24,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const screenWidth = Dimensions.get("window").width;
 
 // API Configuration - Change this to your server URL
-const API_BASE_URL = 'http://192.168.100.6:3000/api'; // Replace with your actual server IP
+const API_BASE_URL = 'http://192.168.100.6:5000/api'; // Replace with your actual server IP
 // For Android Emulator use: http://10.0.2.2:3000/api
 // For iOS Simulator use: http://localhost:3000/api
 

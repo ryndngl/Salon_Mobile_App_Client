@@ -1,3 +1,4 @@
+// screens/ServiceDetailScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -32,10 +33,8 @@ const ServiceDetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
 
-  // FIX: Provide a default empty object for route.params to prevent errors
   const { service, initialStyle } = route.params || {};
 
-  // FIX: Add a robust check for the service object before any logic
   if (!service || !service.name || !service.styles) {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -70,33 +69,23 @@ const ServiceDetailScreen = () => {
     return true;
   });
 
-  // FIXED: Enhanced image source handler
+  // ✅ FIXED: Smart handler for Cloudinary/local images
   const getImageSource = (imageData) => {
-    // If imageData is already a require() object (number), return as is
-    if (typeof imageData === 'number') {
-      return imageData;
-    }
-    
-    // If it's a string (URL from Firestore), try to match to local assets
-    if (typeof imageData === 'string') {
-      // Try to match the image path to a local asset
-      if (imageData.includes('haircut') || imageData.includes('Haircut')) {
-        if (imageData.includes('men') || imageData.includes('Men')) return fallbackImages['Hair Cut'];
-        if (imageData.includes('women') || imageData.includes('Women')) return fallbackImages['Hair Cut'];
-        if (imageData.includes('kids') || imageData.includes('Kids')) return fallbackImages['Hair Cut'];
-        return fallbackImages['Hair Cut'];
-      }
-      if (imageData.includes('haircolor') || imageData.includes('Hair Color')) return fallbackImages['Hair Color'];
-      if (imageData.includes('hairtreatment') || imageData.includes('Hair Treatment')) return fallbackImages['Hair Treatment'];
-      if (imageData.includes('rebond') || imageData.includes('Rebond')) return fallbackImages['Rebond & Forms'];
-      if (imageData.includes('nail') || imageData.includes('Nail')) return fallbackImages['Nail Care'];
-      if (imageData.includes('footspa') || imageData.includes('Foot Spa')) return fallbackImages['Foot Spa'];
-      
-      // If no match found, use service-based fallback
+    if (!imageData) {
       return fallbackImages[service.name] || fallbackImages['Hair Cut'];
     }
-    
-    // Default fallback based on service name
+
+    if (typeof imageData === 'number') {
+      return imageData; // local require()
+    }
+
+    if (typeof imageData === 'string') {
+      if (imageData.startsWith('http')) {
+        return { uri: imageData }; // ✅ Cloudinary / Firebase URL
+      }
+      return fallbackImages[service.name] || fallbackImages['Hair Cut'];
+    }
+
     return fallbackImages[service.name] || fallbackImages['Hair Cut'];
   };
 
@@ -114,26 +103,18 @@ const ServiceDetailScreen = () => {
     });
   };
 
-  // FIXED: Better separation of foot spa package vs single image styles
   const footSpaPackage = filteredStyles.find(style => Array.isArray(style.images));
   const singleImageStyles = filteredStyles.filter(style => !Array.isArray(style.images));
 
   const renderCard = (style, index, forceFullWidth = false) => {
     const hasMultipleImages = Array.isArray(style.images);
-    // FIX: Pass both service.name and style.name to isFavorite
     const favorite = isFavorite(service.name, style.name);
-    
-    // FIXED: Force full width only for foot spa package with multiple images
     const shouldUseFullWidth = hasMultipleImages || forceFullWidth;
     const cardStyle = shouldUseFullWidth ? styles.fullWidthCard : styles.card;
 
     return (
-      <View
-        key={index}
-        style={cardStyle}
-      >
+      <View key={index} style={cardStyle}>
         {hasMultipleImages ? (
-          // Multiple images layout for Foot Spa Package
           <View style={styles.footSpaImagesContainer}>
             {style.images.map((img, idx) => (
               <TouchableOpacity key={idx} onPress={() => openImageModal(img)}>
@@ -146,7 +127,6 @@ const ServiceDetailScreen = () => {
             ))}
           </View>
         ) : (
-          // Single image layout for other services
           <TouchableOpacity onPress={() => openImageModal(style.image)}>
             <View style={styles.imageWrapper}>
               <Image 
@@ -165,15 +145,13 @@ const ServiceDetailScreen = () => {
           </View>
 
           {style.description && (
-            <Text style={styles.description}>
-              {style.description}
-            </Text>
+            <Text style={styles.description}>{style.description}</Text>
           )}
 
           <View style={styles.bottomRow}>
             <TouchableOpacity
-             onPress={() => toggleFavorite(service, style)}
-             style={styles.heartWrapper}
+              onPress={() => toggleFavorite(service, style)}
+              style={styles.heartWrapper}
             >
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
@@ -196,16 +174,9 @@ const ServiceDetailScreen = () => {
 
   const categoriesToRender = isHairCut ? haircutCategories : (isHairColor ? hairColorCategories : []);
 
-  // DEBUGGING: Add this function para ma-check mo yung data structure
-  const debugServiceData = () => {
-    if (service?.styles?.length > 0) {
-    }
-  };
-
-  // Call this in useEffect para ma-debug mo
   useEffect(() => {
     if (service) {
-      debugServiceData();
+      // Debugging helper if needed
     }
   }, [service]);
 
@@ -238,26 +209,23 @@ const ServiceDetailScreen = () => {
           </View>
         )}
 
-         {isHairColor && ["Full Hair", "Highlight", "Balayage"].includes(selectedCategory) && (
-        <Text style={styles.noteText}>
-             Note: Prices may vary depending on hair length.
-        </Text>
-       )}
+        {isHairColor && ["Full Hair", "Highlight", "Balayage"].includes(selectedCategory) && (
+          <Text style={styles.noteText}>
+            Note: Prices may vary depending on hair length.
+          </Text>
+        )}
 
-        {/* FIXED: Render Foot Spa Package separately with full width */}
         {footSpaPackage && (
           <View style={styles.footSpaSection}>
             {renderCard(footSpaPackage, 0, true)}
           </View>
         )}
 
-        {/* FIXED: Render single image styles in grid layout */}
         {singleImageStyles.length > 0 && (
           <View style={styles.grid}>
             {singleImageStyles.map((style, index) => renderCard(style, index, false))}
           </View>
         )}
-         
       </ScrollView>
 
       <Modal
@@ -284,177 +252,156 @@ const ServiceDetailScreen = () => {
 export default ServiceDetailScreen;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  container: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 40 },
+
+  title: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    marginBottom: 16, 
+    color: '#000' 
   },
-  container: {
-    paddingTop: 3,
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+
+  tabs: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    marginBottom: 20, 
+    borderBottomWidth: 1, 
+    borderColor: '#eee', 
+    paddingBottom: 8 
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#000',
+  tabButton: { 
+    paddingVertical: 10, 
+    paddingHorizontal: 20, 
+    borderBottomWidth: 2, 
+    borderColor: 'transparent' 
   },
-  tabs: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  tabButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: 2,
-    borderColor: 'transparent',
-  },
-  activeTab: {
-    borderColor: '#7a0000',
-  },
-  tabText: {
-    fontSize: 16,
-    color: '#555',
-  },
-  activeTabText: {
-    color: '#7a0000',
-    fontWeight: 'bold',
-  },
-  footSpaSection: {
-    marginBottom: 20,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingBottom: 10,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginBottom: 20,
-    width: cardWidth,
-    overflow: 'hidden',
-    elevation: 3,
-    borderWidth: 0.5,
-    borderColor: '#D4D4D4',
-  },
-  fullWidthCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginBottom: 20,
-    width: '100%',
-    overflow: 'hidden',
-    elevation: 3,
-    borderWidth: 0.5,
-    borderColor: '#D4D4D4',
-    alignSelf: 'center',
-  },
-  imageWrapper: {
-    width: '100%',
-    aspectRatio: 1,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  fullWidthImage: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-  },
-  cardContent: {
-    padding: 12,
-    flex: 1, 
+  activeTab: { borderColor: '#7a0000' },
+  tabText: { fontSize: 16, color: '#666' },
+  activeTabText: { color: '#7a0000', fontWeight: 'bold' },
+
+  grid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
     justifyContent: 'space-between', 
+    gap: 16,            // 🔑 dagdag spacing
+    paddingBottom: 20 
   },
-  namePriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 6,
+
+  card: { 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    marginBottom: 20, 
+    width: cardWidth, 
+    overflow: 'hidden', 
+    elevation: 4, 
+    borderWidth: 0.5, 
+    borderColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
   },
-  styleName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    flex: 1,
+
+  fullWidthCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    marginBottom: 20, 
+    width: '100%', 
+    overflow: 'hidden', 
+    elevation: 4, 
+    borderWidth: 0.5, 
+    borderColor: '#E5E5E5',
+    alignSelf: 'center'
   },
-  price: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#d10000',
+
+  imageWrapper: { 
+    width: '100%', 
+    aspectRatio: 1, 
+    overflow: 'hidden' 
   },
-  description: {
-    fontSize: 13,
-    color: '#555',
-    marginTop: 4,
-    marginBottom: 10,
-    lineHeight: 18, 
+  image: { 
+    width: '100%', 
+    height: '100%', 
+    resizeMode: 'cover' 
   },
-  bottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 6,
+  fullWidthImage: { 
+    width: '100%', 
+    height: 220, 
+    resizeMode: 'cover' 
   },
-  heartWrapper: {
-    padding: 4, 
+
+  cardContent: { 
+    padding: 14, 
+    flex: 1, 
+    justifyContent: 'space-between' 
   },
-  bookNowButton: {
-    backgroundColor: "#007d3f",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 100,
-    elevation: 1,
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 40,
+  namePriceRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 6, 
+    marginBottom: 8 
   },
-  bookNowButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
+  styleName: { fontSize: 15, fontWeight: '600', color: '#1a1a1a', flex: 1 },
+  price: { fontSize: 14, fontWeight: '700', color: '#d10000' },
+
+  description: { fontSize: 13, color: '#555', marginTop: 4, marginBottom: 10, lineHeight: 18 },
+
+  bottomRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',  // 🔑 para hiwalay heart at button
+    alignItems: 'center', 
+    marginTop: 10 
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  heartWrapper: { padding: 4 },
+  bookNowButton: { 
+    backgroundColor: "#007d3f", 
+    paddingVertical: 8, 
+    paddingHorizontal: 20, 
+    borderRadius: 100, 
+    elevation: 1, 
+    alignItems: "center", 
+    justifyContent: "center", 
+    height: 40 
   },
-  fullscreenImage: {
-    width: '100%',
-    height: '100%',
+  bookNowButtonText: { 
+    color: '#fff', 
+    fontSize: 14, 
+    fontWeight: 'bold', 
+    letterSpacing: 0.5, 
+    textTransform: 'uppercase' 
   },
-  footSpaImagesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.9)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  footSpaImage: {
-    width: (screenWidth - 64) / 3,
-    height: 100,
-    borderRadius: 10,
-    resizeMode: 'cover',
+  fullscreenImage: { width: '100%', height: '100%' },
+
+  footSpaImagesContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 12, 
+    paddingVertical: 8, 
+    paddingHorizontal: 8, 
+    gap: 8 
   },
-  noteText: {
-    fontSize: 14,
-    color: 'red',
-    marginTop: 5,
-    marginBottom: 17,
-    textAlign: 'left',
-    paddingHorizontal: 5
+  footSpaImage: { 
+    width: (screenWidth - 64) / 3, 
+    height: 100, 
+    borderRadius: 12, 
+    resizeMode: 'cover' 
   },
+
+  noteText: { 
+    fontSize: 14, 
+    color: 'red', 
+    marginTop: 5, 
+    marginBottom: 17, 
+    textAlign: 'left', 
+    paddingHorizontal: 5 
+  }
 });
