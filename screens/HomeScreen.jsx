@@ -91,41 +91,60 @@ const HomeScreen = () => {
     }
   };
 
-  const searchStyles = async (query) => {
-    if (!query.trim()) {
-      setFilteredStyles([]);
-      return;
-    }
+const searchStyles = async (query) => {
+  if (!query.trim()) {
+    setFilteredStyles([]);
+    return;
+  }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(query)}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/search/styles?query=${encodeURIComponent(query)}`
+    );
+
+    if (response.ok) {
       const data = await response.json();
-      setFilteredStyles(data);
-      
-    } catch (error) {
-      console.error('Error searching styles:', error);
-      
-      // Fallback to local search if API fails
+      const dataWithIds = data.map((item, index) => ({
+        ...item,
+        searchId: `${item.serviceName || 'unknown'}-${item.name || item._id || index}`,
+      }));
+      setFilteredStyles(dataWithIds);
+    } else {
+      console.warn("Search endpoint failed, falling back locally");
+
+      // fallback local search
       const results = servicesData.flatMap((service) =>
         (service.styles || [])
-          .filter(
-            (style) =>
-              style.name &&
-              style.name.toLowerCase().includes(query.toLowerCase())
+          .filter((style) =>
+            style.name?.toLowerCase().includes(query.toLowerCase())
           )
           .map((style) => ({
             ...style,
             serviceName: service.name,
+            searchId: `${service.name}-${style.name || style._id || Math.random()}`,
           }))
       );
       setFilteredStyles(results);
     }
-  };
+  } catch (error) {
+    console.error("Error searching styles:", error);
+
+    // fallback local again
+    const results = servicesData.flatMap((service) =>
+      (service.styles || [])
+        .filter((style) =>
+          style.name?.toLowerCase().includes(query.toLowerCase())
+        )
+        .map((style) => ({
+          ...style,
+          serviceName: service.name,
+          searchId: `${service.name}-${style.name || style._id || Math.random()}`,
+        }))
+    );
+    setFilteredStyles(results);
+  }
+};
+
 
   // Effects
   useEffect(() => {
@@ -548,7 +567,7 @@ const HomeScreen = () => {
             style={styles.searchIcon}
           />
           <TextInput
-            placeholder="Search styles or services..."
+            placeholder="Search styles"
             placeholderTextColor="#aaa"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -576,9 +595,9 @@ const HomeScreen = () => {
         <FlatList
           keyboardShouldPersistTaps="handled"
           data={filteredStyles}
-          keyExtractor={(item, index) =>
-            `${item.serviceName}-${item.name || item._id}-${index}`
-          }
+          keyExtractor={(item, index) => {
+             return item.searchId || `${item.serviceName || 'unknown'}-${item.name || 'unnamed'}-${index}`;
+         }}
           numColumns={1}
           contentContainerStyle={{
             paddingHorizontal: 16,
@@ -658,11 +677,8 @@ const HomeScreen = () => {
   );
 };
 
-// Add these new styles to your existing StyleSheet
 const styles = StyleSheet.create({
-  // ... (keep all your existing styles)
   
-  // Loading and Error states
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

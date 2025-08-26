@@ -28,12 +28,22 @@ const fallbackImages = {
   'Nail Care': require('../assets/OurServicesImage/nailcare.webp'),
   'Foot Spa': require('../assets/OurServicesImage/footspa.webp'),
 };
+// Helper function para kunin tamang images
+const extractImages = (style, service) => {
+  if (Array.isArray(style.images) && style.images.length > 0) {
+    return style.images; // multiple images (e.g. Foot Spa)
+  }
+  if (style.image) {
+    return [style.image]; // single image (e.g. Buzz Cut, Bob Cut, etc.)
+  }
+  return [fallbackImages[service.name] || fallbackImages['Hair Cut']];
+};
 
 const ServiceDetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
 
-  const { service, initialStyle } = route.params || {};
+  const { service } = route.params || {};
 
   if (!service || !service.name || !service.styles) {
     return (
@@ -60,7 +70,7 @@ const ServiceDetailScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
-  const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   const filteredStyles = service.styles.filter((style) => {
     if (isHairCut || isHairColor) {
@@ -69,29 +79,17 @@ const ServiceDetailScreen = () => {
     return true;
   });
 
-  // ✅ FIXED: Smart handler for Cloudinary/local images
   const getImageSource = (imageData) => {
-    if (!imageData) {
-      return fallbackImages[service.name] || fallbackImages['Hair Cut'];
+    if (!imageData) return fallbackImages[service.name] || fallbackImages['Hair Cut'];
+    if (typeof imageData === 'number') return imageData;
+    if (typeof imageData === 'string' && imageData.startsWith('http')) {
+      return { uri: imageData };
     }
-
-    if (typeof imageData === 'number') {
-      return imageData; // local require()
-    }
-
-    if (typeof imageData === 'string') {
-      if (imageData.startsWith('http')) {
-        return { uri: imageData }; // ✅ Cloudinary / Firebase URL
-      }
-      return fallbackImages[service.name] || fallbackImages['Hair Cut'];
-    }
-
     return fallbackImages[service.name] || fallbackImages['Hair Cut'];
   };
 
   const openImageModal = (image) => {
-    const imageSource = getImageSource(image);
-    setSelectedImage(imageSource);
+    setSelectedImage(getImageSource(image));
     setModalVisible(true);
   };
 
@@ -103,36 +101,36 @@ const ServiceDetailScreen = () => {
     });
   };
 
-  const footSpaPackage = filteredStyles.find(style => Array.isArray(style.images));
-  const singleImageStyles = filteredStyles.filter(style => !Array.isArray(style.images));
-
   const renderCard = (style, index, forceFullWidth = false) => {
-    const hasMultipleImages = Array.isArray(style.images);
-    const favorite = isFavorite(service.name, style.name);
+    const imagesArray = extractImages(style, service);
+    const hasMultipleImages = imagesArray.length > 1;
     const shouldUseFullWidth = hasMultipleImages || forceFullWidth;
-    const cardStyle = shouldUseFullWidth ? styles.fullWidthCard : styles.card;
+
+    const favorite = isFavorite(service.name, style.name);
 
     return (
-      <View key={index} style={cardStyle}>
+      <View key={index} style={shouldUseFullWidth ? styles.fullWidthCard : styles.card}>
+        
+        {/* 🔑 kung maraming images, ilabas lahat */}
         {hasMultipleImages ? (
           <View style={styles.footSpaImagesContainer}>
-            {style.images.map((img, idx) => (
+            {imagesArray.map((img, idx) => (
               <TouchableOpacity key={idx} onPress={() => openImageModal(img)}>
                 <Image 
                   source={getImageSource(img)} 
                   style={styles.footSpaImage}
-                  defaultSource={fallbackImages['Foot Spa']}
+                  defaultSource={fallbackImages[service.name]}
                 />
               </TouchableOpacity>
             ))}
           </View>
         ) : (
-          <TouchableOpacity onPress={() => openImageModal(style.image)}>
+          <TouchableOpacity onPress={() => openImageModal(imagesArray[0])}>
             <View style={styles.imageWrapper}>
               <Image 
-                source={getImageSource(style.image)} 
+                source={getImageSource(imagesArray[0])} 
                 style={shouldUseFullWidth ? styles.fullWidthImage : styles.image}
-                defaultSource={fallbackImages[service.name] || fallbackImages['Hair Cut']}
+                defaultSource={fallbackImages[service.name]}
               />
             </View>
           </TouchableOpacity>
@@ -174,12 +172,6 @@ const ServiceDetailScreen = () => {
 
   const categoriesToRender = isHairCut ? haircutCategories : (isHairColor ? hairColorCategories : []);
 
-  useEffect(() => {
-    if (service) {
-      // Debugging helper if needed
-    }
-  }, [service]);
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
@@ -215,17 +207,9 @@ const ServiceDetailScreen = () => {
           </Text>
         )}
 
-        {footSpaPackage && (
-          <View style={styles.footSpaSection}>
-            {renderCard(footSpaPackage, 0, true)}
-          </View>
-        )}
-
-        {singleImageStyles.length > 0 && (
-          <View style={styles.grid}>
-            {singleImageStyles.map((style, index) => renderCard(style, index, false))}
-          </View>
-        )}
+        <View style={styles.grid}>
+          {filteredStyles.map((style, index) => renderCard(style, index))}
+        </View>
       </ScrollView>
 
       <Modal
@@ -255,12 +239,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 40 },
 
-  title: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    marginBottom: 16, 
-    color: '#000' 
-  },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, color: '#000' },
 
   tabs: { 
     flexDirection: 'row', 
@@ -270,12 +249,7 @@ const styles = StyleSheet.create({
     borderColor: '#eee', 
     paddingBottom: 8 
   },
-  tabButton: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 20, 
-    borderBottomWidth: 2, 
-    borderColor: 'transparent' 
-  },
+  tabButton: { paddingVertical: 10, paddingHorizontal: 20, borderBottomWidth: 2, borderColor: 'transparent' },
   activeTab: { borderColor: '#7a0000' },
   tabText: { fontSize: 16, color: '#666' },
   activeTabText: { color: '#7a0000', fontWeight: 'bold' },
@@ -284,7 +258,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     justifyContent: 'space-between', 
-    gap: 16,            // 🔑 dagdag spacing
+    gap: 16,
     paddingBottom: 20 
   },
 
@@ -302,7 +276,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4
   },
-
   fullWidthCard: { 
     backgroundColor: '#fff', 
     borderRadius: 16, 
@@ -315,93 +288,26 @@ const styles = StyleSheet.create({
     alignSelf: 'center'
   },
 
-  imageWrapper: { 
-    width: '100%', 
-    aspectRatio: 1, 
-    overflow: 'hidden' 
-  },
-  image: { 
-    width: '100%', 
-    height: '100%', 
-    resizeMode: 'cover' 
-  },
-  fullWidthImage: { 
-    width: '100%', 
-    height: 220, 
-    resizeMode: 'cover' 
-  },
+  imageWrapper: { width: '100%', aspectRatio: 1, overflow: 'hidden' },
+  image: { width: '100%', height: '100%', resizeMode: 'cover' },
+  fullWidthImage: { width: '100%', height: 220, resizeMode: 'cover' },
 
-  cardContent: { 
-    padding: 14, 
-    flex: 1, 
-    justifyContent: 'space-between' 
-  },
-  namePriceRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginTop: 6, 
-    marginBottom: 8 
-  },
+  cardContent: { padding: 14, flex: 1, justifyContent: 'space-between' },
+  namePriceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, marginBottom: 8 },
   styleName: { fontSize: 15, fontWeight: '600', color: '#1a1a1a', flex: 1 },
   price: { fontSize: 14, fontWeight: '700', color: '#d10000' },
-
   description: { fontSize: 13, color: '#555', marginTop: 4, marginBottom: 10, lineHeight: 18 },
 
-  bottomRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between',  // 🔑 para hiwalay heart at button
-    alignItems: 'center', 
-    marginTop: 10 
-  },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   heartWrapper: { padding: 4 },
-  bookNowButton: { 
-    backgroundColor: "#007d3f", 
-    paddingVertical: 8, 
-    paddingHorizontal: 20, 
-    borderRadius: 100, 
-    elevation: 1, 
-    alignItems: "center", 
-    justifyContent: "center", 
-    height: 40 
-  },
-  bookNowButtonText: { 
-    color: '#fff', 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    letterSpacing: 0.5, 
-    textTransform: 'uppercase' 
-  },
+  bookNowButton: { backgroundColor: "#007d3f", paddingVertical: 8, paddingHorizontal: 20, borderRadius: 100, height: 40, alignItems: "center", justifyContent: "center" },
+  bookNowButtonText: { color: '#fff', fontSize: 14, fontWeight: 'bold', letterSpacing: 0.5, textTransform: 'uppercase' },
 
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.9)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   fullscreenImage: { width: '100%', height: '100%' },
 
-  footSpaImagesContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 12, 
-    paddingVertical: 8, 
-    paddingHorizontal: 8, 
-    gap: 8 
-  },
-  footSpaImage: { 
-    width: (screenWidth - 64) / 3, 
-    height: 100, 
-    borderRadius: 12, 
-    resizeMode: 'cover' 
-  },
+  footSpaImagesContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, padding: 8 },
+  footSpaImage: { width: (screenWidth - 64) / 3, height: 100, borderRadius: 12, resizeMode: 'cover' },
 
-  noteText: { 
-    fontSize: 14, 
-    color: 'red', 
-    marginTop: 5, 
-    marginBottom: 17, 
-    textAlign: 'left', 
-    paddingHorizontal: 5 
-  }
+  noteText: { fontSize: 14, color: 'red', marginTop: 5, marginBottom: 17, textAlign: 'left', paddingHorizontal: 5 }
 });
