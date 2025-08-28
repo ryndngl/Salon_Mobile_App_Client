@@ -24,6 +24,17 @@ const fallbackImages = {
   'Foot Spa': require('../../assets/OurServicesImage/footspa.webp'),
 };
 
+// Helper function to extract images
+const extractImages = (styleData, serviceName) => {
+  if (Array.isArray(styleData?.images) && styleData.images.length > 0) {
+    return styleData.images; // multiple images (e.g. Foot Spa)
+  }
+  if (styleData?.image) {
+    return [styleData.image]; // single image
+  }
+  return [fallbackImages[serviceName] || fallbackImages['Hair Cut']];
+};
+
 const BigServiceCard = ({ 
   service, 
   serviceName, // For search results
@@ -40,6 +51,7 @@ const BigServiceCard = ({
 
   // Determine the actual service name
   const actualServiceName = serviceName || service?.name || 'Hair Cut';
+  const isFootSpaService = actualServiceName.toLowerCase().trim() === 'foot spa';
 
   const getImageSource = (imageData) => {
     if (!imageData) {
@@ -117,7 +129,82 @@ const BigServiceCard = ({
     }
   };
 
-  const imageSource = getImageSource(styleData?.image);
+  // Get all images for this style
+  const imagesArray = extractImages(styleData, actualServiceName);
+  const hasMultipleImages = imagesArray.length > 1;
+
+  // For Foot Spa service with multiple images - Special Layout
+  if (isFootSpaService && hasMultipleImages) {
+    return (
+      <TouchableOpacity
+        style={styles.footSpaCard}
+        onPress={handleCardPress}
+        activeOpacity={0.8}
+      >
+        {/* Three Images at the Top in a Row */}
+        <View style={styles.footSpaImagesRow}>
+          {imagesArray.slice(0, 3).map((img, idx) => (
+            <TouchableOpacity key={idx} onPress={handleImagePress}>
+              <Image
+                source={getImageSource(img)}
+                style={styles.footSpaImage}
+                resizeMode="cover"
+                onLoadStart={handleImageLoadStart}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                defaultSource={fallbackImages[actualServiceName] || fallbackImages['Foot Spa']}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Content Below Images */}
+        <View style={styles.footSpaContent}>
+          <View style={styles.footSpaNamePriceRow}>
+            <Text style={styles.footSpaTitle} numberOfLines={2}>
+              {styleData?.name || 'Unnamed Style'}
+            </Text>
+            <Text style={styles.footSpaPrice}>₱{styleData?.price}</Text>
+          </View>
+          
+          {styleData?.description && (
+            <Text style={styles.footSpaDescription} numberOfLines={3}>
+              {styleData.description}
+            </Text>
+          )}
+          
+          <View style={styles.footSpaBottomActions}>
+            <TouchableOpacity
+              style={styles.footSpaHeartIcon}
+              onPress={handleFavoritePress}
+            >
+              <Ionicons
+                name={isFavorite() ? "heart" : "heart-outline"}
+                size={24}
+                color={isFavorite() ? "red" : "#555"}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.footSpaBookButton}
+              onPress={handleBookPress}
+            >
+              <Text style={styles.footSpaBookButtonText}>BOOK NOW</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {imageLoading && (
+          <View style={styles.imageLoadingOverlay}>
+            <ActivityIndicator size="small" color="#7a0000" />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  // Default rendering for regular cards and single-image cards
+  const imageSource = getImageSource(imagesArray[0]);
 
   return (
     <TouchableOpacity
@@ -225,6 +312,86 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  
+  // FOOT SPA CARD STYLES - VERTICAL LAYOUT WITH THREE IMAGES AT TOP
+  footSpaCard: {
+    width: "100%",
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
+    elevation: 2,
+    borderWidth: 0.5,
+    borderColor: '#E5E5E5',
+  },
+  footSpaImagesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12,
+    paddingHorizontal: 8,
+  },
+  footSpaImage: {
+    width: (screenWidth - 96) / 3, 
+    height: 100,
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+  footSpaContent: {
+    flex: 1,
+  },
+  footSpaNamePriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  footSpaTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    flex: 1,
+    marginRight: 8,
+  },
+  footSpaPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: "#d10000",
+  },
+  footSpaDescription: {
+    fontSize: 13,
+    color: "#555",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  footSpaBottomActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  footSpaHeartIcon: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.02)",
+  },
+  footSpaBookButton: {
+    backgroundColor: '#007d3f',
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    borderRadius: 100,
+  },
+  footSpaBookButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  
+  // Regular Card Styles
   imageWrapper: {
     position: 'relative',
     width: '100%',
@@ -320,7 +487,8 @@ const styles = StyleSheet.create({
   bottomActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 12,
   },
   heartIcon: {
     padding: 8,
@@ -329,17 +497,17 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     backgroundColor: '#007d3f',
-    flex: 1,
     paddingVertical: 12,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    borderRadius: 8,
-    marginLeft: 12, 
+    borderRadius: 100,
   },
   bookButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 });
 
