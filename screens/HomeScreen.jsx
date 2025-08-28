@@ -189,27 +189,33 @@ const searchStyles = async (query) => {
   const displayServices = [
     {
       name: "Hair Cut",
-      image: require("../assets/OurServicesImage/haircut.webp"),
+      description: "Stylish cuts tailored to your look.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircut_dnayis.webp",
     },
     {
       name: "Hair Color",
-      image: require("../assets/OurServicesImage/haircolor.webp"),
+      description: "Transform your hair with vibrant, lasting colors.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircolor_bk135m.webp",
     },
     {
       name: "Hair Treatment",
-      image: require("../assets/OurServicesImage/hairtreatment.webp"),
+      description: "Revitalize and strengthen your hair for a healthy, shiny look.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375430/hairtreatment_ddzkdc.webp",
     },
     {
       name: "Rebond & Forms",
-      image: require("../assets/OurServicesImage/rebondandforms.webp"),
+      description: "Get sleek, straight, and perfectly styled hair.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/rebondandforms_ydvsyo.webp",
     },
     {
       name: "Nail Care",
-      image: require("../assets/OurServicesImage/nailcare.webp"),
+      description: "Keep your nails healthy, polished, and beautifully designed.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/nailcare_izbusf.webp",
     },
     {
       name: "Foot Spa",
-      image: require("../assets/OurServicesImage/footspa.webp"),
+      description: "Relax and rejuvenate your feet with soothing care.",
+      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375432/footspa_idzcx1.webp",
     },
   ];
 
@@ -256,18 +262,6 @@ const searchStyles = async (query) => {
         return { uri: imageData };
       }
     }
-    
-    // Fallback to local images
-    const fallbackImages = {
-      "Hair Cut": require("../assets/OurServicesImage/haircut.webp"),
-      "Hair Color": require("../assets/OurServicesImage/haircolor.webp"),
-      "Hair Treatment": require("../assets/OurServicesImage/hairtreatment.webp"),
-      "Rebond & Forms": require("../assets/OurServicesImage/rebondandforms.webp"),
-      "Nail Care": require("../assets/OurServicesImage/nailcare.webp"),
-      "Foot Spa": require("../assets/OurServicesImage/footspa.webp"),
-    };
-    
-    return fallbackImages["Hair Cut"];
   };
 
   // Testimonial functions (keeping your existing code)
@@ -483,22 +477,6 @@ const searchStyles = async (query) => {
         </Text>
       </View>
 
-      {/* Show loading or error states */}
-      {loading && (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading services...</Text>
-        </View>
-      )}
-
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchServices} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       <Text style={styles.servicesTitle}>Our Services</Text>
       <View style={styles.servicesContainer}>
         {displayServices.map((service, index) => (
@@ -510,12 +488,13 @@ const searchStyles = async (query) => {
             disabled={loading}
           >
             <Image
-              source={service.image}
+              source={{ uri: service.image }}
               style={styles.serviceImage}
               resizeMode="cover"
             />
             <View style={styles.serviceLabelContainer}>
-              <Text style={styles.serviceText}>{service.name}</Text>
+            <Text style={styles.serviceText}>{service.name}</Text>
+            <Text style={styles.serviceDescription}>{service.description}</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -605,33 +584,27 @@ const searchStyles = async (query) => {
             paddingTop: 20,
             gap: 12,
           }}
-          renderItem={({ item }) => {
-            const isFootSpa = item.serviceName
-              .toLowerCase()
-              .includes("foot spa");
-
-            const styleWithImage = {
-              ...item,
-              image: getImageSource(item.image),
-            };
-
-            return (
-              <BigServiceCard
-                serviceName={item.serviceName}
-                styleData={styleWithImage}
-                onImagePress={() => openImageModal(styleWithImage.image)}
-                onBookPress={() =>
-                  navigation.navigate("BookingFormScreen", {
-                    serviceName: item.serviceName,
-                    styleName: item.name,
-                    stylePrice: item.price,
-                  })
-                }
-                isFootSpa={isFootSpa}
-                searchCard={true}
-              />
-            );
-          }}
+         renderItem={({ item }) => {
+          const isFootSpa = item.serviceName
+           .toLowerCase()
+            .includes("foot spa");
+  return (
+    <BigServiceCard
+      serviceName={item.serviceName}
+      styleData={item}  
+      onImagePress={() => openImageModal(item.image)}  
+      onBookPress={() =>
+        navigation.navigate("BookingFormScreen", {
+          serviceName: item.serviceName,
+          styleName: item.name,
+          stylePrice: item.price,
+        })
+      }
+      isFootSpa={isFootSpa}
+      searchCard={true}
+    />
+  );
+}}
           ListEmptyComponent={
             loading ? (
               <View style={styles.loadingContainer}>
@@ -678,41 +651,6 @@ const searchStyles = async (query) => {
 };
 
 const styles = StyleSheet.create({
-  
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
-  },
-  errorContainer: {
-    backgroundColor: "#ffebee",
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#d32f2f",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  retryButton: {
-    backgroundColor: "#d13f3f",
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
   // Main container with padding for the entire screen
   scrollContainer: {
     paddingHorizontal: 16,
@@ -851,7 +789,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-
+  serviceDescription: {
+    color: "#555",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 5,
+    paddingHorizontal: 5,
+  },
   // Testimonials section
   testimonialsSection: {
     marginTop: 20,

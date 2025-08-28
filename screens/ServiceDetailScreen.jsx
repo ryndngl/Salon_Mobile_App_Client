@@ -1,5 +1,5 @@
 // screens/ServiceDetailScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,35 +15,14 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useFavorites } from "../context/FavoritesContext";
+import { extractImages, getImageSource } from "../utils/imageHelper";
 
 const screenWidth = Dimensions.get('window').width;
 const cardWidth = (screenWidth - 48) / 2;
 
-// Fallback images for services
-const fallbackImages = {
-  'Hair Cut': require('../assets/OurServicesImage/haircut.webp'),
-  'Hair Color': require('../assets/OurServicesImage/haircolor.webp'),
-  'Hair Treatment': require('../assets/OurServicesImage/hairtreatment.webp'),
-  'Rebond & Forms': require('../assets/OurServicesImage/rebondandforms.webp'),
-  'Nail Care': require('../assets/OurServicesImage/nailcare.webp'),
-  'Foot Spa': require('../assets/OurServicesImage/footspa.webp'),
-};
-
-// Helper function para kunin tamang images
-const extractImages = (style, service) => {
-  if (Array.isArray(style.images) && style.images.length > 0) {
-    return style.images; // multiple images (e.g. Foot Spa)
-  }
-  if (style.image) {
-    return [style.image]; // single image (e.g. Buzz Cut, Bob Cut, etc.)
-  }
-  return [fallbackImages[service.name] || fallbackImages['Hair Cut']];
-};
-
 const ServiceDetailScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-
   const { service } = route.params || {};
 
   if (!service || !service.name || !service.styles) {
@@ -52,7 +31,8 @@ const ServiceDetailScreen = () => {
         <Text style={{ fontSize: 16 }}>Service not found. Please go back.</Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={{ marginTop: 20, padding: 10, backgroundColor: '#7a0000', borderRadius: 5 }}>
+          style={{ marginTop: 20, padding: 10, backgroundColor: '#7a0000', borderRadius: 5 }}
+        >
           <Text style={{ color: 'white', fontWeight: 'bold' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -65,7 +45,6 @@ const ServiceDetailScreen = () => {
 
   const haircutCategories = ['Men', 'Women', 'Kids'];
   const hairColorCategories = ['Root Touch Up', 'Full Hair', 'Highlight', 'Balayage'];
-
   const initialCategory = isHairCut ? 'Men' : (isHairColor ? 'Root Touch Up' : null);
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
@@ -74,24 +53,22 @@ const ServiceDetailScreen = () => {
 
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  const filteredStyles = service.styles.filter((style) => {
-    if (isHairCut || isHairColor) {
-      return style.category === selectedCategory;
-    }
-    return true;
-  });
+  console.log('Full service object received:', JSON.stringify(service, null, 2));
+console.log('Service styles array:', service.styles);
 
-  const getImageSource = (imageData) => {
-    if (!imageData) return fallbackImages[service.name] || fallbackImages['Hair Cut'];
-    if (typeof imageData === 'number') return imageData;
-    if (typeof imageData === 'string' && imageData.startsWith('http')) {
-      return { uri: imageData };
-    }
-    return fallbackImages[service.name] || fallbackImages['Hair Cut'];
-  };
+const filteredStyles = service.styles.filter((style) => {
+  console.log('Processing style:', style.name, 'with data:', style);
+  
+  if (isHairCut || isHairColor) {
+    return style.category === selectedCategory;
+  }
+  return true;
+});
 
   const openImageModal = (image) => {
-    setSelectedImage(getImageSource(image));
+    // Use the imageHelper function directly
+    const imageSource = getImageSource(image, service.name);
+    setSelectedImage(imageSource);
     setModalVisible(true);
   };
 
@@ -104,28 +81,42 @@ const ServiceDetailScreen = () => {
   };
 
   const renderCard = (style, index) => {
-    const imagesArray = extractImages(style, service);
+    const imagesArray = extractImages(style);
     const hasMultipleImages = imagesArray.length > 1;
     const favorite = isFavorite(service.name, style.name);
+
+    // Debug logging to see what we're getting
+    console.log(`Style: ${style.name}`);
+    console.log('Images array:', imagesArray);
+    console.log('First image:', imagesArray[0]);
+    console.log('Generated source:', getImageSource(imagesArray[0], service.name));
 
     // Special layout for Foot Spa with multiple images
     if (isFootSpa && hasMultipleImages) {
       return (
         <View key={index} style={styles.footSpaCard}>
-          {/* Three Images at the Top */}
           <View style={styles.footSpaImagesRow}>
-            {imagesArray.slice(0, 3).map((img, idx) => (
-              <TouchableOpacity key={idx} onPress={() => openImageModal(img)}>
-                <Image
-                  source={getImageSource(img)}
-                  style={styles.footSpaImage}
-                  defaultSource={fallbackImages[service.name]}
-                />
-              </TouchableOpacity>
-            ))}
+            {imagesArray.slice(0, 3).map((img, idx) => {
+              const imageSource = getImageSource(img, service.name);
+              return (
+                <TouchableOpacity key={idx} onPress={() => openImageModal(img)}>
+                  <Image
+                    source={imageSource}
+                    style={styles.footSpaImage}
+                    onError={(error) => {
+                      console.log(`Image ${idx} load error:`, error);
+                      console.log('Image source was:', imageSource);
+                      console.log('Original image data:', img);
+                    }}
+                    onLoad={() => {
+                      console.log(`Image ${idx} loaded successfully`);
+                    }}
+                  />
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {/* Content Below Images */}
           <View style={styles.footSpaContent}>
             <View style={styles.footSpaNamePriceRow}>
               <Text style={styles.footSpaStyleName} numberOfLines={2}>{style.name}</Text>
@@ -159,15 +150,25 @@ const ServiceDetailScreen = () => {
       );
     }
 
-    // Default card rendering logic for all other services
+    // Default card rendering
+    const firstImage = imagesArray[0];
+    const imageSource = getImageSource(firstImage, service.name);
+    
     return (
       <View key={index} style={styles.card}>
-        <TouchableOpacity onPress={() => openImageModal(imagesArray[0])}>
+        <TouchableOpacity onPress={() => openImageModal(firstImage)}>
           <View style={styles.imageWrapper}>
             <Image
-              source={getImageSource(imagesArray[0])}
+              source={imageSource}
               style={styles.image}
-              defaultSource={fallbackImages[service.name]}
+              onError={(error) => {
+                console.log('Card image load error:', error);
+                console.log('Image source was:', imageSource);
+                console.log('Original image data:', firstImage);
+              }}
+              onLoad={() => {
+                console.log('Card image loaded successfully');
+              }}
             />
           </View>
         </TouchableOpacity>
