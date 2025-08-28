@@ -55,36 +55,45 @@ export default function LoginScreen() {
     }
   }, [loginSuccessVisible]);
 
-  const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert("Error", "Please fill in all fields");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    const result = await login(email, password);
-
-    if (result.success) {
-      setLoginSuccessVisible(true);
-
-      setTimeout(() => {
-        setLoginSuccessVisible(false);
-        // ✅ dito lang magse-set ng auth state
-        setUser(result.user);
-        setIsAuthenticated(true);
-      }, 2000);
-    } else {
-      Alert.alert("Login Failed", result.message);
+   const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
     }
-  } catch (error) {
-    Alert.alert("Error", "Something went wrong. Please try again.");
-    console.error("Login Error:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+
+    try {
+      setLoading(true);
+
+      const result = await login(email, password);
+
+      if (result.success) {
+        // Show modal
+        setLoginSuccessVisible(true);
+
+        // Delay for modal visibility, then navigate
+        setTimeout(() => {
+          setLoginSuccessVisible(false);
+
+          // Update auth context
+          setUser(result.user);
+          setIsAuthenticated(true);
+
+          // Navigate to MainTabs and reset stack
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "MainTabs" }],
+          });
+        }, 1000); // 1 second delay
+      } else {
+        Alert.alert("Login Failed", result.message);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+      console.error("Login Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView

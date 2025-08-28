@@ -170,7 +170,8 @@ const login = async (email, password) => {
       
       // ✅ Mark that user has ever logged in (for first time detection)
       await AsyncStorage.setItem('hasEverLoggedIn', 'true');
-
+      setUser(userData);
+      setIsAuthenticated(true);
       console.log('Login successful (pending auth):', userData.email || userData.fullName);
 
       // 👉 Huwag muna mag setUser / setIsAuthenticated dito

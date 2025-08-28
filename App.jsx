@@ -95,7 +95,7 @@ const AuthNavigator = () => {
     return (
       <View style={styles.loadingContainer}>
         <ImageBackground
-          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
+          source= {require("./assets/SplashScreenImage/BGIMG.jpg")}
           style={styles.backgroundImage}
           imageStyle={styles.backgroundImageStyle}
         >
@@ -115,7 +115,7 @@ const AuthNavigator = () => {
         style={[styles.splashContainer, { opacity: splashFadeOut }]}
       >
         <ImageBackground
-          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
+          source= {require("./assets/SplashScreenImage/BGIMG.jpg")}
           style={styles.backgroundImage}
           imageStyle={styles.backgroundImageStyle}
         />
@@ -134,45 +134,36 @@ const AuthNavigator = () => {
       }
       screenOptions={{
         headerShown: false,
-        animation: "none",   
+        animation: "none", 
       }}
     >
-      {!isAuthenticated ? (
-        <>
-          <Stack.Screen name="GetStarted" component={GetStartedScreen} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </>
-      ) : (
+      {/* MGA SCREEN NA LAGING AVAILABLE, HINDI KAILANGAN NAKA-LOGIN
+        Para walang error kahit sa Get Started o Login screen ka.
+      */}
+      <Stack.Screen name="GetStarted" component={GetStartedScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="FAQs" component={FAQScreen} />
+      <Stack.Screen name="ContactUs" component={ContactUsScreen} />
+      <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+
+      {/* MGA SCREEN NA PARA LANG SA NAKA-LOGIN NA USER
+        Nasa loob ng conditional block para hindi ma-access kung hindi naka-login.
+      */}
+      {isAuthenticated && (
         <>
           <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
-          <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
+          <Stack.Screen name="ServicesScreen" component={ServicesScreen} /> 
           <Stack.Screen name="ServiceDetailScreen" component={ServiceDetailScreen} />
           <Stack.Screen name="BookingScreen" component={BookingScreen} />
-          <Stack.Screen
-            name="BookingFormScreen"
-            component={BookingFormScreen}
-            options={{ title: "Booking Details", headerShown: true }}
-          />
+          <Stack.Screen name="BookingFormScreen" component={BookingFormScreen} options={{ title: "Booking Details", headerShown: true }} />
           <Stack.Screen name="BookingSummaryScreen" component={BookingSummaryScreen} />
           <Stack.Screen name="PaymentMethodScreen" component={PaymentMethodScreen} />
-          <Stack.Screen
-            name="NotificationScreen"
-            component={NotificationScreen}
-            options={{ title: "Notifications", headerShown: true }}
-          />
-          <Stack.Screen
-            name="BookingConfirmationScreen"
-            component={BookingConfirmationScreen}
-          />
+          <Stack.Screen name="NotificationScreen" component={NotificationScreen} options={{ title: "Notifications", headerShown: true }} />
+          <Stack.Screen name="BookingConfirmationScreen" component={BookingConfirmationScreen} />
           <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-
-          {/* Help & Support Screens */}
-          <Stack.Screen name="FAQs" component={FAQScreen} />
-          <Stack.Screen name="ContactUs" component={ContactUsScreen} />
-          <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         </>
       )}
     </Stack.Navigator>
