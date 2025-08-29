@@ -13,6 +13,7 @@ import {
   Modal,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -22,6 +23,8 @@ export default function ForgotPasswordScreen() {
   
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [manualTokenMode, setManualTokenMode] = useState(false);
+  const [manualToken, setManualToken] = useState('');
   
   // Success modal animation
   const [emailSentVisible, setEmailSentVisible] = useState(false);
@@ -55,7 +58,6 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
@@ -65,8 +67,10 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
 
-      // Replace with your actual API endpoint
-      const response = await fetch('YOUR_API_URL/api/auth/forgot-password', {
+      console.log('Sending request to:', 'http://192.168.100.6:5000/api/auth/forgot-password');
+      console.log('Email:', email);
+
+      const response = await fetch('http://192.168.100.6:5000/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,26 +78,49 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email }),
       });
 
-      const result = await response.json();
+      console.log('Response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
+      if (!responseText) {
+        Alert.alert('Error', 'Empty response from server');
+        return;
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.log('JSON Parse Error:', parseError);
+        Alert.alert('Error', 'Server returned invalid response');
+        return;
+      }
 
       if (result.success) {
-        // Show success modal
         setEmailSentVisible(true);
-        
-        // Auto close modal and navigate back after 3 seconds
         setTimeout(() => {
           setEmailSentVisible(false);
-          navigation.goBack();
-        }, 3000);
+        }, 4000);
       } else {
         Alert.alert('Error', result.message || 'Failed to send reset email');
       }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-      console.error('Forgot password error:', error);
+      console.error('Network Error:', error);
+      Alert.alert('Error', 'Network error. Check your connection and server.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualTokenSubmit = () => {
+    if (!manualToken.trim()) {
+      Alert.alert('Error', 'Please enter the token from your email');
+      return;
+    }
+
+    // Navigate to reset password screen with the manual token
+    navigation.navigate('ResetPasswordScreen', { token: manualToken.trim() });
   };
 
   return (
@@ -108,59 +135,113 @@ export default function ForgotPasswordScreen() {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <View style={styles.overlay}>
-          <View style={styles.card}>
-            {/* Back Button */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-            >
-              <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
-            </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.overlay}>
+            <View style={styles.card}>
+              {/* Back Button */}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
+              </TouchableOpacity>
 
-            <Text style={styles.title}>Forgot Password</Text>
-            <Text style={styles.subtitle}>
-              Enter your email address and we'll send you a link to reset your password.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor="#888"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
-
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleForgotPassword}
-              disabled={loading || !email}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-            >
-              <Text style={styles.backToLoginText}>
-                Remember your password?{' '}
-                <Text style={styles.backToLoginLink}>Back to Login</Text>
+              <Text style={styles.title}>Forgot Password</Text>
+              <Text style={styles.subtitle}>
+                Enter your email address and we'll send you a link to reset your password.
               </Text>
-            </TouchableOpacity>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                placeholderTextColor="#888"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                editable={!loading}
+              />
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleForgotPassword}
+                disabled={loading || !email}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Send Reset Link</Text>
+                )}
+              </TouchableOpacity>
+
+              {/* Manual Token Entry Option */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {!manualTokenMode ? (
+                <TouchableOpacity
+                  style={styles.manualTokenButton}
+                  onPress={() => setManualTokenMode(true)}
+                >
+                  <Ionicons name="key-outline" size={20} color="#d13f3f" />
+                  <Text style={styles.manualTokenButtonText}>
+                    I have a reset token
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.manualTokenSection}>
+                  <Text style={styles.manualTokenLabel}>
+                    Enter the token from your email:
+                  </Text>
+                  <TextInput
+                    style={styles.tokenInput}
+                    placeholder="Paste token here..."
+                    placeholderTextColor="#888"
+                    value={manualToken}
+                    onChangeText={setManualToken}
+                    multiline={true}
+                    numberOfLines={3}
+                  />
+                  <View style={styles.tokenButtonRow}>
+                    <TouchableOpacity
+                      style={styles.cancelTokenButton}
+                      onPress={() => {
+                        setManualTokenMode(false);
+                        setManualToken('');
+                      }}
+                    >
+                      <Text style={styles.cancelTokenButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.submitTokenButton}
+                      onPress={handleManualTokenSubmit}
+                      disabled={!manualToken.trim()}
+                    >
+                      <Text style={styles.submitTokenButtonText}>Continue</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Text style={styles.backToLoginText}>
+                  Remember your password?{' '}
+                  <Text style={styles.backToLoginLink}>Back to Login</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </ImageBackground>
 
-      {/* Email Sent Success Modal */}
+      {/* Enhanced Email Sent Success Modal */}
       <Modal
         animationType="none"
         transparent={true}
@@ -178,10 +259,24 @@ export default function ForgotPasswordScreen() {
               size={60}
               color="#4CAF50"
             />
-            <Text style={styles.successText}>Email Sent!</Text>
+            <Text style={styles.successText}>Email Sent! 📧</Text>
             <Text style={styles.successSubText}>
-              Please check your email for password reset instructions.
+              Check your email for reset instructions.
             </Text>
+            <Text style={styles.successInstructions}>
+              • Click the button in the email{'\n'}
+              • Or copy and paste the token above{'\n'}
+              • Link expires in 1 hour ⏰
+            </Text>
+            <TouchableOpacity
+              style={styles.gotItButton}
+              onPress={() => {
+                setEmailSentVisible(false);
+                setManualTokenMode(true);
+              }}
+            >
+              <Text style={styles.gotItButtonText}>Got it!</Text>
+            </TouchableOpacity>
           </Animated.View>
         </View>
       </Modal>
@@ -194,7 +289,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FCE4EC',
   },
-
+  scrollContainer: {
+    flexGrow: 1,
+  },
   backgroundImage: {
     flex: 1,
     justifyContent: 'center',
@@ -202,7 +299,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-
   overlay: {
     flex: 1,
     width: '100%',
@@ -211,7 +307,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-
   card: {
     width: '90%',
     maxWidth: 400,
@@ -223,14 +318,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-
   backButton: {
     position: 'absolute',
     top: 20,
     left: 20,
     padding: 5,
   },
-
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -239,7 +332,6 @@ const styles = StyleSheet.create({
     color: '#d13f3f',
     textAlign: 'center',
   },
-
   subtitle: {
     fontSize: 16,
     color: '#666',
@@ -247,7 +339,6 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     lineHeight: 22,
   },
-
   input: {
     width: '100%',
     height: 55,
@@ -260,7 +351,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-
   button: {
     width: '100%',
     height: 55,
@@ -268,42 +358,120 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 25,
-    borderColor: '#4CAF50',
+    marginBottom: 20,
     elevation: 1,
   },
-
   buttonText: {
     color: '#fff',
     fontSize: 19,
     fontWeight: 'bold',
-    letterSpacing: 0.5,
   },
-
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    width: '100%',
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#666',
+    fontSize: 14,
+  },
+  manualTokenButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderColor: '#d13f3f',
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 25,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  manualTokenButtonText: {
+    marginLeft: 8,
+    color: '#d13f3f',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  manualTokenSection: {
+    width: '100%',
+    marginBottom: 25,
+  },
+  manualTokenLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  tokenInput: {
+    width: '100%',
+    minHeight: 80,
+    borderColor: '#D4D4D4',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#F8F8F8',
+    fontSize: 14,
+    color: '#333',
+    textAlignVertical: 'top',
+    marginBottom: 15,
+  },
+  tokenButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cancelTokenButton: {
+    flex: 1,
+    height: 45,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelTokenButtonText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  submitTokenButton: {
+    flex: 1,
+    height: 45,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitTokenButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   backToLoginText: {
     color: '#666',
     fontSize: 15,
-    marginTop: 10,
     textAlign: 'center',
   },
-
   backToLoginLink: {
     color: '#d13f3f',
     fontWeight: 'bold',
     textDecorationLine: 'underline',
   },
-
   successModalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   successCard: {
     backgroundColor: '#FAFAFA',
-    paddingVertical: 38,
-    paddingHorizontal: 32,
+    paddingVertical: 30,
+    paddingHorizontal: 25,
     borderRadius: 15,
     alignItems: 'center',
     elevation: 2,
@@ -311,21 +479,37 @@ const styles = StyleSheet.create({
     borderColor: '#EEE',
     maxWidth: '85%',
   },
-
   successText: {
     fontSize: 24,
     fontWeight: '600',
     marginTop: 15,
     color: '#4CAF50',
     textAlign: 'center',
-    letterSpacing: 0.5,
   },
-
   successSubText: {
-    fontSize: 15,
-    color: '#888',
+    fontSize: 16,
+    color: '#666',
     marginTop: 8,
     textAlign: 'center',
-    lineHeight: 22,
+    fontWeight: '500',
+  },
+  successInstructions: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 15,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  gotItButton: {
+    marginTop: 20,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 30,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  gotItButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

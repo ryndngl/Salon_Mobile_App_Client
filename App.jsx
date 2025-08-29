@@ -49,6 +49,8 @@ import BookingSummaryScreen from "./screens/BookingSummaryScreen";
 import BookingConfirmationScreen from "./screens/BookingConfirmationScreen";
 import FavoritesScreen from "./screens/FavoritesScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
+import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 
 // Help & Support Screens
 import FAQScreen from "./screens/FAQScreen";
@@ -58,6 +60,31 @@ import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 
 const Stack = createNativeStackNavigator();
 const { width, height } = Dimensions.get("window");
+
+// ✅ Deep linking config - FIXED screen names
+const linking = {
+  prefixes: ["salonmobileapp://", "exp://192.168.100.6:19000/"],
+  config: {
+    screens: {
+      GetStarted: "get-started",
+      Login: "login", 
+      Register: "register",
+      // FIXED: Match exact screen name
+      ResetPasswordScreen: {
+        path: "reset-password",
+        parse: {
+          token: (token) => token,
+        },
+      },
+      MainTabs: {
+        screens: {
+          Home: "home",
+          Services: "services", 
+        },
+      },
+    },
+  },
+};
 
 // Auth Navigator Component
 const AuthNavigator = () => {
@@ -71,11 +98,9 @@ const AuthNavigator = () => {
 
   const splashFadeOut = useRef(new Animated.Value(1)).current;
 
-  // Handle splash screen for logout
   useEffect(() => {
     if (showSplashOnLogout) {
       splashFadeOut.setValue(1);
-
       const timer = setTimeout(() => {
         Animated.timing(splashFadeOut, {
           toValue: 0,
@@ -85,17 +110,15 @@ const AuthNavigator = () => {
           setShowSplashOnLogout(false);
         });
       }, 2000);
-
       return () => clearTimeout(timer);
     }
   }, [showSplashOnLogout]);
 
-  // Loading screen habang chine-check yung auth status
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ImageBackground
-          source= {require("./assets/SplashScreenImage/BGIMG.jpg")}
+          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
           style={styles.backgroundImage}
           imageStyle={styles.backgroundImageStyle}
         >
@@ -108,14 +131,13 @@ const AuthNavigator = () => {
     );
   }
 
-  // Show splash screen on logout
   if (showSplashOnLogout) {
     return (
       <Animated.View
         style={[styles.splashContainer, { opacity: splashFadeOut }]}
       >
         <ImageBackground
-          source= {require("./assets/SplashScreenImage/BGIMG.jpg")}
+          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
           style={styles.backgroundImage}
           imageStyle={styles.backgroundImageStyle}
         />
@@ -126,42 +148,55 @@ const AuthNavigator = () => {
   return (
     <Stack.Navigator
       initialRouteName={
-        isAuthenticated
-          ? "MainTabs"
-          : isFirstTime
-          ? "GetStarted"
-          : "Login"
+        isAuthenticated ? "MainTabs" : isFirstTime ? "GetStarted" : "LoginScreen"
       }
       screenOptions={{
         headerShown: false,
-        animation: "none", 
+        animation: "none",
       }}
     >
-      {/* MGA SCREEN NA LAGING AVAILABLE, HINDI KAILANGAN NAKA-LOGIN
-        Para walang error kahit sa Get Started o Login screen ka.
-      */}
+      {/* ✅ FIXED: Consistent screen names throughout the app */}
       <Stack.Screen name="GetStarted" component={GetStartedScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="LoginScreen" component={LoginScreen} />
+      <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="FAQs" component={FAQScreen} />
       <Stack.Screen name="ContactUs" component={ContactUsScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
 
-      {/* MGA SCREEN NA PARA LANG SA NAKA-LOGIN NA USER
-        Nasa loob ng conditional block para hindi ma-access kung hindi naka-login.
-      */}
       {isAuthenticated && (
         <>
           <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
-          <Stack.Screen name="ServicesScreen" component={ServicesScreen} /> 
-          <Stack.Screen name="ServiceDetailScreen" component={ServiceDetailScreen} />
+          <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
+          <Stack.Screen
+            name="ServiceDetailScreen"
+            component={ServiceDetailScreen}
+          />
           <Stack.Screen name="BookingScreen" component={BookingScreen} />
-          <Stack.Screen name="BookingFormScreen" component={BookingFormScreen} options={{ title: "Booking Details", headerShown: true }} />
-          <Stack.Screen name="BookingSummaryScreen" component={BookingSummaryScreen} />
-          <Stack.Screen name="PaymentMethodScreen" component={PaymentMethodScreen} />
-          <Stack.Screen name="NotificationScreen" component={NotificationScreen} options={{ title: "Notifications", headerShown: true }} />
-          <Stack.Screen name="BookingConfirmationScreen" component={BookingConfirmationScreen} />
+          <Stack.Screen
+            name="BookingFormScreen"
+            component={BookingFormScreen}
+            options={{ title: "Booking Details", headerShown: true }}
+          />
+          <Stack.Screen
+            name="BookingSummaryScreen"
+            component={BookingSummaryScreen}
+          />
+          <Stack.Screen
+            name="PaymentMethodScreen"
+            component={PaymentMethodScreen}
+          />
+          <Stack.Screen
+            name="NotificationScreen"
+            component={NotificationScreen}
+            options={{ title: "Notifications", headerShown: true }}
+          />
+          <Stack.Screen
+            name="BookingConfirmationScreen"
+            component={BookingConfirmationScreen}
+          />
           <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
         </>
@@ -177,7 +212,6 @@ const AppContent = () => {
 
   useEffect(() => {
     let splashTimer;
-
     splashTimer = setTimeout(() => {
       Animated.timing(splashFadeOut, {
         toValue: 0,
@@ -187,7 +221,6 @@ const AppContent = () => {
         setIsAppReady(true);
       });
     }, 2000);
-
     return () => {
       if (splashTimer) clearTimeout(splashTimer);
     };
@@ -210,7 +243,7 @@ const AppContent = () => {
   return (
     <BookingProvider>
       <FavoritesProvider>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <AuthNavigator />
           <StatusBar style="dark" />
           <Toast />

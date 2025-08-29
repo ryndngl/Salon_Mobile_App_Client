@@ -35,7 +35,7 @@ const HomeScreen = () => {
   // State variables
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
-  const [displayName, setDisplayName] = useState("Guest");
+  const [displayName, setDisplayName] = useState(""); // Binago sa walang default na pangalan
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [servicesData, setServicesData] = useState([]);
@@ -91,28 +91,45 @@ const HomeScreen = () => {
     }
   };
 
-const searchStyles = async (query) => {
-  if (!query.trim()) {
-    setFilteredStyles([]);
-    return;
-  }
+  const searchStyles = async (query) => {
+    if (!query.trim()) {
+      setFilteredStyles([]);
+      return;
+    }
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/search/styles?query=${encodeURIComponent(query)}`
-    );
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/search/styles?query=${encodeURIComponent(query)}`
+      );
 
-    if (response.ok) {
-      const data = await response.json();
-      const dataWithIds = data.map((item, index) => ({
-        ...item,
-        searchId: `${item.serviceName || 'unknown'}-${item.name || item._id || index}`,
-      }));
-      setFilteredStyles(dataWithIds);
-    } else {
-      console.warn("Search endpoint failed, falling back locally");
+      if (response.ok) {
+        const data = await response.json();
+        const dataWithIds = data.map((item, index) => ({
+          ...item,
+          searchId: `${item.serviceName || 'unknown'}-${item.name || item._id || index}`,
+        }));
+        setFilteredStyles(dataWithIds);
+      } else {
+        console.warn("Search endpoint failed, falling back locally");
 
-      // fallback local search
+        // fallback local search
+        const results = servicesData.flatMap((service) =>
+          (service.styles || [])
+            .filter((style) =>
+              style.name?.toLowerCase().includes(query.toLowerCase())
+            )
+            .map((style) => ({
+              ...style,
+              serviceName: service.name,
+              searchId: `${service.name}-${style.name || style._id || Math.random()}`,
+            }))
+        );
+        setFilteredStyles(results);
+      }
+    } catch (error) {
+      console.error("Error searching styles:", error);
+
+      // fallback local again
       const results = servicesData.flatMap((service) =>
         (service.styles || [])
           .filter((style) =>
@@ -126,24 +143,7 @@ const searchStyles = async (query) => {
       );
       setFilteredStyles(results);
     }
-  } catch (error) {
-    console.error("Error searching styles:", error);
-
-    // fallback local again
-    const results = servicesData.flatMap((service) =>
-      (service.styles || [])
-        .filter((style) =>
-          style.name?.toLowerCase().includes(query.toLowerCase())
-        )
-        .map((style) => ({
-          ...style,
-          serviceName: service.name,
-          searchId: `${service.name}-${style.name || style._id || Math.random()}`,
-        }))
-    );
-    setFilteredStyles(results);
-  }
-};
+  };
 
 
   // Effects
@@ -156,16 +156,19 @@ const searchStyles = async (query) => {
           const userName = userObj.fullName || userObj.name || userObj.displayName;
           setDisplayName(userName || "User");
         } else {
-          setDisplayName("Guest");
+          // I-redirect ang user sa login screen kung walang user na nakita
+          navigation.replace('LoginScreen'); // I-replace ang 'LoginScreen' sa pangalan ng iyong login screen
         }
       } catch (error) {
-        setDisplayName("Guest");
+        console.error("Failed to load user data:", error);
+        // I-redirect ang user sa login screen kung may error sa pagkuha ng data
+        navigation.replace('LoginScreen');
       }
     };
 
     loadUserData();
     fetchServices();
-  }, []);
+  }, [navigation]); // Idagdag ang navigation sa dependency array para sa useEffect
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -575,8 +578,8 @@ const searchStyles = async (query) => {
           keyboardShouldPersistTaps="handled"
           data={filteredStyles}
           keyExtractor={(item, index) => {
-             return item.searchId || `${item.serviceName || 'unknown'}-${item.name || 'unnamed'}-${index}`;
-         }}
+              return item.searchId || `${item.serviceName || 'unknown'}-${item.name || 'unnamed'}-${index}`;
+           }}
           numColumns={1}
           contentContainerStyle={{
             paddingHorizontal: 16,
@@ -584,27 +587,27 @@ const searchStyles = async (query) => {
             paddingTop: 20,
             gap: 12,
           }}
-         renderItem={({ item }) => {
-          const isFootSpa = item.serviceName
-           .toLowerCase()
-            .includes("foot spa");
-  return (
-    <BigServiceCard
-      serviceName={item.serviceName}
-      styleData={item}  
-      onImagePress={() => openImageModal(item.image)}  
-      onBookPress={() =>
-        navigation.navigate("BookingFormScreen", {
-          serviceName: item.serviceName,
-          styleName: item.name,
-          stylePrice: item.price,
-        })
-      }
-      isFootSpa={isFootSpa}
-      searchCard={true}
-    />
-  );
-}}
+          renderItem={({ item }) => {
+           const isFootSpa = item.serviceName
+             .toLowerCase()
+             .includes("foot spa");
+   return (
+     <BigServiceCard
+       serviceName={item.serviceName}
+       styleData={item}  
+       onImagePress={() => openImageModal(item.image)}  
+       onBookPress={() =>
+         navigation.navigate("BookingFormScreen", {
+           serviceName: item.serviceName,
+           styleName: item.name,
+           stylePrice: item.price,
+         })
+       }
+       isFootSpa={isFootSpa}
+       searchCard={true}
+     />
+   );
+ }}
           ListEmptyComponent={
             loading ? (
               <View style={styles.loadingContainer}>
@@ -790,12 +793,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   serviceDescription: {
-    color: "#555",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 5,
-    paddingHorizontal: 5,
-  },
+    color: "#555",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 5,
+    paddingHorizontal: 5,
+  },
   // Testimonials section
   testimonialsSection: {
     marginTop: 20,

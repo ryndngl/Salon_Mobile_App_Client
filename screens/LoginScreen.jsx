@@ -144,15 +144,13 @@ export default function LoginScreen() {
                 />
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={() =>
-                Alert.alert("Forgot Password", "Feature coming soon!")
-              }
-              style={styles.forgotPasswordButton}
-              disabled={loading}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+           
+          <TouchableOpacity
+           onPress={() => navigation.navigate("ForgotPasswordScreen")}
+           style={styles.forgotPasswordButton}
+           disabled={loading}
+           >
+        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
