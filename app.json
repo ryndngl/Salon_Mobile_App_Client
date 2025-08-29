@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "SalonBookingApp",
-    "slug": "SalonBookingApp",
+    "name": "SalonMobileApp",
+    "slug": "SalonMobileApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "scheme": "salonbookingapp",
+    "scheme": "salonmobileapp",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -31,14 +31,14 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "salonbookingapp"
+              "salonmobileapp"
             ]
           }
         ]
       }
     },
     "android": {
-      "package": "com.yourcompany.salonbookingapp",
+      "package": "com.yourcompany.salonmobileapp",
       "edgeToEdgeEnabled": true,
       "config": {
         "googleSignIn": {
@@ -55,7 +55,7 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "salonbookingapp",
+              "scheme": "salonmobileapp",
               "host": "auth.expo.io"
             }
           ],
