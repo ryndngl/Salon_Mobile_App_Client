@@ -1,4 +1,3 @@
-// src/screens/ResetPasswordScreen.js
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -14,6 +13,7 @@ import {
   Modal,
   Animated,
   Easing,
+  ScrollView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -22,14 +22,12 @@ export default function ResetPasswordScreen() {
   const navigation = useNavigation();
   const route = useRoute();
 
-  // token passed from deep link or params
   const { token } = route.params || {};
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Success modal animation
   const [resetSuccessVisible, setResetSuccessVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,7 +71,6 @@ export default function ResetPasswordScreen() {
 
     try {
       setLoading(true);
-
       const response = await fetch(
         "http://192.168.100.6:5000/api/auth/reset-password",
         {
@@ -84,13 +81,10 @@ export default function ResetPasswordScreen() {
           body: JSON.stringify({ token, newPassword }),
         }
       );
-
       const result = await response.json();
 
       if (result.success) {
         setResetSuccessVisible(true);
-
-        // Auto close and navigate to Login
         setTimeout(() => {
           setResetSuccessVisible(false);
           navigation.navigate("LoginScreen");
@@ -113,63 +107,73 @@ export default function ResetPasswordScreen() {
     >
       <ImageBackground
         source={{
-          uri: "https://placehold.co/700x1200/E3F2FD/1565C0?text=Reset+Password",
+          uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background",
         }}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <View style={styles.overlay}>
-          <View style={styles.card}>
-            {/* Back Button */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-            >
-              <Ionicons name="arrow-back-outline" size={24} color="#1565C0" />
-            </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.overlay}>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
+              </TouchableOpacity>
 
-            <Text style={styles.title}>Reset Password</Text>
-            <Text style={styles.subtitle}>
-              Enter your new password below. Make sure it's strong and secure.
-            </Text>
+              <Text style={styles.title}>Reset Password</Text>
+              <Text style={styles.subtitle}>
+                Enter your new password below. Make sure it's strong and secure.
+              </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="New Password"
-              placeholderTextColor="#888"
-              secureTextEntry
-              value={newPassword}
-              onChangeText={setNewPassword}
-              editable={!loading}
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="New Password"
+                placeholderTextColor="#888"
+                secureTextEntry
+                value={newPassword}
+                onChangeText={setNewPassword}
+                editable={!loading}
+              />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              placeholderTextColor="#888"
-              secureTextEntry
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              editable={!loading}
-            />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#888"
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                editable={!loading}
+              />
 
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleResetPassword}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Update Password</Text>
-              )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleResetPassword}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Update Password</Text>
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Text style={styles.backToLoginText}>
+                  Remember your password?{' '}
+                  <Text style={styles.backToLoginLink}>Back to Login</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       </ImageBackground>
 
-      {/* Success Modal */}
       <Modal animationType="none" transparent={true} visible={resetSuccessVisible}>
         <View style={styles.successModalContainer}>
           <Animated.View
@@ -193,7 +197,10 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#FCE4EC",
+  },
+  scrollContainer: {
+    flexGrow: 1,
   },
   backgroundImage: {
     flex: 1,
@@ -232,7 +239,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 15,
     marginTop: 25,
-    color: "#1565C0",
+    color: "#d13f3f",
     textAlign: "center",
   },
   subtitle: {
@@ -257,7 +264,7 @@ const styles = StyleSheet.create({
   button: {
     width: "100%",
     height: 55,
-    backgroundColor: "#1565C0",
+    backgroundColor: "#4CAF50",
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
@@ -270,6 +277,17 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: "bold",
     letterSpacing: 0.5,
+  },
+  backToLoginText: {
+    color: '#666',
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 15,
+  },
+  backToLoginLink: {
+    color: '#d13f3f',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   successModalContainer: {
     flex: 1,

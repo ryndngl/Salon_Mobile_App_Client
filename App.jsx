@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Linking from "expo-linking";
 
 LogBox.ignoreLogs([
   "Warning: Text strings must be rendered within a <Text> component.",
@@ -61,27 +62,43 @@ import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
 const Stack = createNativeStackNavigator();
 const { width, height } = Dimensions.get("window");
 
-// ✅ Deep linking config - FIXED screen names
+// UPDATED: Deep linking configuration for password reset
 const linking = {
-  prefixes: ["salonmobileapp://", "exp://192.168.100.6:19000/"],
+  prefixes: [
+    "salonmobileapp://",
+    "exp://192.168.100.6:19000/--/",
+    "http://192.168.100.6:5000/",
+  ],
   config: {
     screens: {
       GetStarted: "get-started",
-      Login: "login", 
+      LoginScreen: "login",
       Register: "register",
-      // FIXED: Match exact screen name
+      ForgotPasswordScreen: "forgot-password",
+      // MAIN ROUTE: For password reset deep linking
       ResetPasswordScreen: {
-        path: "reset-password",
+        path: "ResetPasswordScreen",
         parse: {
+          token: (token) => {
+            console.log("🔗 Deep link received token:", token);
+            return token;
+          },
+        },
+        stringify: {
           token: (token) => token,
         },
       },
       MainTabs: {
         screens: {
           Home: "home",
-          Services: "services", 
+          Services: "services",
         },
       },
+      // Help screens
+      FAQs: "faqs",
+      ContactUs: "contact-us",
+      TermsConditions: "terms-conditions",
+      PrivacyPolicy: "privacy-policy",
     },
   },
 };
@@ -97,6 +114,35 @@ const AuthNavigator = () => {
   } = useAuth();
 
   const splashFadeOut = useRef(new Animated.Value(1)).current;
+
+  // ADDED: Deep link handling
+  useEffect(() => {
+    // Handle initial URL when app is opened via deep link
+    const handleInitialURL = async () => {
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          console.log("🚀 App opened with URL:", initialUrl);
+        }
+      } catch (error) {
+        console.error("❌ Error getting initial URL:", error);
+      }
+    };
+
+    // Handle URLs when app is already running
+    const handleDeepLink = (event) => {
+      console.log("🔗 Deep link received while app running:", event.url);
+    };
+
+    handleInitialURL();
+
+    // Listen for incoming links
+    const subscription = Linking.addEventListener("url", handleDeepLink);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (showSplashOnLogout) {
@@ -152,20 +198,37 @@ const AuthNavigator = () => {
       }
       screenOptions={{
         headerShown: false,
-        animation: "none",
+        animation: "fade",
       }}
     >
-      {/* ✅ FIXED: Consistent screen names throughout the app */}
+      {/* UPDATED: Always available screens (including when authenticated) */}
       <Stack.Screen name="GetStarted" component={GetStartedScreen} />
       <Stack.Screen name="LoginScreen" component={LoginScreen} />
-      <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
-      <Stack.Screen name="ResetPasswordScreen" component={ResetPasswordScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      
+      {/* PASSWORD RESET SCREENS - Always available for deep linking */}
+      <Stack.Screen 
+        name="ForgotPasswordScreen" 
+        component={ForgotPasswordScreen}
+        options={{
+          title: "Forgot Password",
+        }}
+      />
+      <Stack.Screen 
+        name="ResetPasswordScreen" 
+        component={ResetPasswordScreen}
+        options={{
+          title: "Reset Password",
+        }}
+      />
+      
+      {/* Help screens - always available */}
       <Stack.Screen name="FAQs" component={FAQScreen} />
       <Stack.Screen name="ContactUs" component={ContactUsScreen} />
       <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
 
+      {/* Authenticated screens */}
       {isAuthenticated && (
         <>
           <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
@@ -243,7 +306,29 @@ const AppContent = () => {
   return (
     <BookingProvider>
       <FavoritesProvider>
-        <NavigationContainer linking={linking}>
+        <NavigationContainer
+          linking={linking}
+          onReady={() => {
+            console.log("🚀 Navigation is ready!");
+          }}
+          onStateChange={(state) => {
+            // Debug deep linking navigation
+            console.log("🧭 Navigation state changed");
+            if (state) {
+              const currentRoute = state.routes[state.index];
+              console.log("📍 Current route:", currentRoute.name);
+              if (currentRoute.params) {
+                console.log("📋 Route params:", currentRoute.params);
+              }
+            }
+          }}
+          fallback={
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#d13f3f" />
+              <Text style={styles.loadingText}>Loading navigation...</Text>
+            </View>
+          }
+        >
           <AuthNavigator />
           <StatusBar style="dark" />
           <Toast />
@@ -270,6 +355,9 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   backgroundImage: {
     flex: 1,

@@ -1,4 +1,3 @@
-// LoginScreen.jsx
 import React, { useState, useRef, useEffect } from "react";
 import {
   View,
@@ -15,6 +14,7 @@ import {
   Pressable,
   Animated,
   Easing,
+  ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
@@ -29,7 +29,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Animation for login success
   const [loginSuccessVisible, setLoginSuccessVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -55,7 +54,7 @@ export default function LoginScreen() {
     }
   }, [loginSuccessVisible]);
 
-   const handleLogin = async () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
@@ -67,23 +66,19 @@ export default function LoginScreen() {
       const result = await login(email, password);
 
       if (result.success) {
-        // Show modal
         setLoginSuccessVisible(true);
 
-        // Delay for modal visibility, then navigate
         setTimeout(() => {
           setLoginSuccessVisible(false);
 
-          // Update auth context
           setUser(result.user);
           setIsAuthenticated(true);
 
-          // Navigate to MainTabs and reset stack
           navigation.reset({
             index: 0,
             routes: [{ name: "MainTabs" }],
           });
-        }, 1000); // 1 second delay
+        }, 1000);
       } else {
         Alert.alert("Login Failed", result.message);
       }
@@ -96,18 +91,16 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ImageBackground
-        source={{
-          uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background",
-        }}
-        style={styles.backgroundImage}
-        resizeMode="cover"
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.overlay}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <Text style={styles.title}>Login to Your Salon Account</Text>
 
@@ -145,18 +138,21 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
            
-          <TouchableOpacity
-           onPress={() => navigation.navigate("ForgotPasswordScreen")}
-           style={styles.forgotPasswordButton}
-           disabled={loading}
-           >
-        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPasswordScreen")}
+              style={styles.forgotPasswordButton}
+              disabled={loading}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.button}
+              style={[
+                styles.button,
+                (!email || !password || loading) && styles.buttonDisabled
+              ]}
               onPress={handleLogin}
-              disabled={loading}
+              disabled={loading || !email || !password}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
@@ -175,10 +171,9 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      {/* Login Success Modal */}
       <Modal
         animationType="none"
         transparent={true}
@@ -194,51 +189,37 @@ export default function LoginScreen() {
             <Ionicons
               name="checkmark-circle-outline"
               size={60}
-              color="#006600"
+              color="#4CAF50"
             />
-            <Text style={styles.successText}>Login Successful</Text>
-            <Text style={styles.successSubText}>Redirecting...</Text>
+            <Text style={styles.successText}>Login Successful! </Text>
           </Animated.View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FCE4EC",
+    backgroundColor: "#ffffff",
   },
-
-  backgroundImage: {
+  keyboardView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    height: "100%",
   },
-
-  overlay: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
-
   card: {
-    width: "90%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
     padding: 30,
-    borderColor: "#D4D4D4",
-    elevation: 3,
+    elevation: 1.5,
     alignItems: "center",
   },
-
   title: {
     fontSize: 28,
     fontWeight: "bold",
@@ -246,7 +227,6 @@ const styles = StyleSheet.create({
     color: "#d13f3f",
     textAlign: "center",
   },
-
   input: {
     width: "100%",
     height: 55,
@@ -259,7 +239,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
-
   passwordInputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -272,7 +251,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F8F8",
     paddingRight: 10,
   },
-
   passwordInputField: {
     flex: 1,
     height: "100%",
@@ -280,22 +258,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
-
   togglePasswordButton: {
     padding: 5,
   },
-
   forgotPasswordButton: {
     alignSelf: "flex-end",
     marginBottom: 20,
   },
-
   forgotPasswordText: {
     color: "#d13f3f",
     fontSize: 14,
     textDecorationLine: "underline",
   },
-
   button: {
     width: "100%",
     height: 55,
@@ -304,62 +278,56 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 25,
-    borderColor: "#4CAF50",
     elevation: 1,
   },
-
+  buttonDisabled: {
+    backgroundColor: "#cccccc",
+  },
   buttonText: {
     color: "#fff",
     fontSize: 19,
     fontWeight: "bold",
-    letterSpacing: 0.5,
   },
-
   registerText: {
     color: "#666",
     fontSize: 15,
     marginTop: 10,
     textAlign: "center",
   },
-
   registerLink: {
     color: "#d13f3f",
     fontWeight: "bold",
     textDecorationLine: "underline",
   },
-
   successModalContainer: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },
-
   successCard: {
     backgroundColor: "#FAFAFA",
-    paddingVertical: 38,
-    paddingHorizontal: 32,
+    paddingVertical: 30,
+    paddingHorizontal: 25,
     borderRadius: 15,
     alignItems: "center",
     elevation: 2,
     borderWidth: 1,
     borderColor: "#EEE",
+    maxWidth: "85%",
   },
-
   successText: {
     fontSize: 24,
     fontWeight: "600",
     marginTop: 15,
-    color: "#006600",
+    color: "#4CAF50",
     textAlign: "center",
-    letterSpacing: 0.5,
   },
-
   successSubText: {
-    fontSize: 15,
-    color: "#888",
+    fontSize: 16,
+    color: "#666",
     marginTop: 8,
     textAlign: "center",
-    lineHeight: 22,
+    fontWeight: "500",
   },
 });

@@ -6,11 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
-  Image,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
+import Ionicons from "react-native-vector-icons/Ionicons";
 
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
@@ -20,6 +21,7 @@ export default function RegisterScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -43,6 +45,7 @@ export default function RegisterScreen({ navigation }) {
     }
 
     try {
+      setLoading(true);
       const response = await fetch("http://192.168.100.6:5000/api/auth/sign-up", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,6 +67,8 @@ export default function RegisterScreen({ navigation }) {
     } catch (error) {
       Alert.alert("Registration Error", error.message);
       console.error("Registration Error:", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,23 +76,22 @@ export default function RegisterScreen({ navigation }) {
     navigation.navigate("LoginScreen");
   };
 
+  const isFormValid = fullName && email && password && confirmPassword && agreedToTerms && !loading;
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ImageBackground
-        source={{
-          uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background",
-        }}
-        style={styles.backgroundImage}
-        resizeMode="cover"
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={styles.overlay}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <Text style={styles.title}>Create Your Account</Text>
 
-            {/* Full Name Input */}
             <TextInput
               style={styles.input}
               placeholder="Full Name"
@@ -95,9 +99,9 @@ export default function RegisterScreen({ navigation }) {
               autoCapitalize="words"
               value={fullName}
               onChangeText={setFullName}
+              editable={!loading}
             />
 
-            {/* Email Input */}
             <TextInput
               style={styles.input}
               placeholder="Email Address"
@@ -106,9 +110,9 @@ export default function RegisterScreen({ navigation }) {
               autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
+              editable={!loading}
             />
 
-            {/* Password Input */}
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInputField}
@@ -117,23 +121,21 @@ export default function RegisterScreen({ navigation }) {
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                editable={!loading}
               />
               <TouchableOpacity
                 style={styles.togglePasswordButton}
                 onPress={() => setShowPassword(!showPassword)}
+                disabled={loading}
               >
-                <Image
-                  source={{
-                    uri: showPassword
-                      ? "https://img.icons8.com/material-outlined/24/000000/visible--v1.png"
-                      : "https://img.icons8.com/material-outlined/24/000000/invisible--v1.png",
-                  }}
-                  style={styles.togglePasswordIcon}
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={24}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
 
-            {/* Confirm Password Input */}
             <View style={styles.passwordInputContainer}>
               <TextInput
                 style={styles.passwordInputField}
@@ -142,34 +144,30 @@ export default function RegisterScreen({ navigation }) {
                 secureTextEntry={!showConfirmPassword}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
+                editable={!loading}
               />
               <TouchableOpacity
                 style={styles.togglePasswordButton}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={loading}
               >
-                <Image
-                  source={{
-                    uri: showConfirmPassword
-                      ? "https://img.icons8.com/material-outlined/24/000000/visible--v1.png"
-                      : "https://img.icons8.com/material-outlined/24/000000/invisible--v1.png",
-                  }}
-                  style={styles.togglePasswordIcon}
+                <Ionicons
+                  name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                  size={24}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
 
-            {/* Checkbox */}
             <TouchableOpacity
               style={styles.checkboxContainer}
               onPress={() => setAgreedToTerms(!agreedToTerms)}
+              disabled={loading}
             >
-              <Image
-                source={{
-                  uri: agreedToTerms
-                    ? "https://img.icons8.com/material-outlined/24/000000/checked-checkbox.png"
-                    : "https://img.icons8.com/material-outlined/24/000000/unchecked-checkbox.png",
-                }}
-                style={styles.checkboxIcon}
+              <Ionicons
+                name={agreedToTerms ? "checkbox-outline" : "square-outline"}
+                size={20}
+                color="#d13f3f"
               />
               <Text style={styles.checkboxText}>
                 I agree with the
@@ -189,58 +187,54 @@ export default function RegisterScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.button} onPress={handleRegister}>
-              <Text style={styles.buttonText}>Register</Text>
+            <TouchableOpacity 
+              style={[styles.button, !isFormValid && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={!isFormValid}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Register</Text>
+              )}
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleLoginRedirect}>
+            <TouchableOpacity 
+              onPress={handleLoginRedirect}
+              disabled={loading}
+            >
               <Text style={styles.loginText}>
                 Already have an account?{" "}
                 <Text style={styles.loginLink}>Login here.</Text>
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ImageBackground>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FCE4EC",
+    backgroundColor: "#ffffff",
   },
-  backgroundImage: {
+  keyboardView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    height: "100%",
   },
-  overlay: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   card: {
-    width: "90%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
     padding: 30,
-    borderColor: "#D4D4D4",
-    elevation: 3,
+    elevation: 1.5,
     alignItems: "center",
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: "600",
-    marginBottom: 5,
-    color: "#880E4F",
   },
   title: {
     fontSize: 28,
@@ -283,29 +277,19 @@ const styles = StyleSheet.create({
   togglePasswordButton: {
     padding: 5,
   },
-  togglePasswordIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#888",
-  },
-  // ðŸ‘ˆ NEW: Styles for the checkbox and text
   checkboxContainer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     width: "100%",
     marginBottom: 20,
-  },
-  checkboxIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 10,
-    tintColor: "#d13f3f",
+    paddingTop: 5,
   },
   checkboxText: {
     flex: 1,
     fontSize: 14,
     color: "#666",
-    flexWrap: "wrap",
+    marginLeft: 10,
+    lineHeight: 20,
   },
   linkText: {
     color: "#d13f3f",
@@ -321,19 +305,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     marginBottom: 25,
-    borderColor: "#d13f3f",
-    elevation: 3,
+    elevation: 1,
+  },
+  buttonDisabled: {
+    backgroundColor: "#cccccc",
   },
   buttonText: {
     color: "#fff",
     fontSize: 19,
     fontWeight: "bold",
-    letterSpacing: 0.5,
   },
   loginText: {
     color: "#666",
     fontSize: 15,
     marginTop: 10,
+    textAlign: "center",
   },
   loginLink: {
     color: "#d13f3f",

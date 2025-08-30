@@ -19,11 +19,11 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [initialAuthCheck, setInitialAuthCheck] = useState(false);
   
-  // New states for splash screen functionality
-  const [isFirstTime, setIsFirstTime] = useState(true);
+  // FIXED: Proper splash screen states
+  const [isFirstTime, setIsFirstTime] = useState(false); // Default to false
   const [showSplashOnLogout, setShowSplashOnLogout] = useState(false);
 
-  // Check kung may saved token sa device startup
+  // FIXED: Check authentication status with proper first-time logic
   const checkAuthStatus = async (showLogs = true) => {
     try {
       if (showLogs) setIsLoading(true);
@@ -32,25 +32,23 @@ export const AuthProvider = ({ children }) => {
       const userData = await AsyncStorage.getItem('user');
       const hasEverLoggedIn = await AsyncStorage.getItem('hasEverLoggedIn');
       
-      // ✅ Determine if first time based on whether user has ever logged in
-      // AND if there's no current valid session
-      if (!hasEverLoggedIn) {
-        // True first time user - never logged in before
+      // FIXED: Proper first time detection
+      if (hasEverLoggedIn === null) {
+        // Truly first time - never opened app before
         setIsFirstTime(true);
+        await AsyncStorage.setItem('hasEverLoggedIn', 'false'); // Mark as opened
         if (showLogs) {
           console.log('First time user detected');
         }
-      } else if (!token || !userData) {
-        // User has logged in before but currently logged out
+      } else {
+        // User has opened app before
         setIsFirstTime(false);
         if (showLogs) {
-          console.log('Returning user (logged out)');
+          console.log('Returning user');
         }
-      } else {
-        // User has active session
-        setIsFirstTime(false);
       }
 
+      // Check if user is authenticated
       if (token && userData) {
         try {
           const parsedUser = JSON.parse(userData);
@@ -76,7 +74,6 @@ export const AuthProvider = ({ children }) => {
             // Try to migrate old favorites if user doesn't have user-specific favorites yet
             const userId = completeUserData.id || completeUserData._id;
             if (userId) {
-              // Don't await this - let it run in background
               FavoritesMigrationHelper.migrateGlobalFavoritesToUser(userId)
                 .catch(err => console.warn('Migration warning:', err));
             }
@@ -122,7 +119,7 @@ export const AuthProvider = ({ children }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
       });
 
       if (response.ok) {
@@ -133,62 +130,65 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Token verification failed:', error);
       // For network errors, assume token is still valid to allow offline usage
-      return true; // Changed to true to allow offline functionality
+      return true;
     }
   };
 
- // Login function
-const login = async (email, password) => {
-  try {
-    const response = await fetch('http://192.168.100.6:5000/api/auth/sign-in', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-      timeout: 15000,
-    });
+  // FIXED: Login function with proper state management
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('http://192.168.100.6:5000/api/auth/sign-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        timeout: 15000,
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.isSuccess && data.token) {
-      // Save token first
-      await AsyncStorage.setItem('token', data.token);
+      if (data.isSuccess && data.token) {
+        // Save token first
+        await AsyncStorage.setItem('token', data.token);
 
-      // Create complete user data
-      const userData = {
-        id: data.user._id || data.user.id,
-        _id: data.user._id || data.user.id, 
-        fullName: data.user.fullName || data.user.name || '',
-        name: data.user.fullName || data.user.name || '',
-        email: data.user.email || '',
-        phone: data.user.phone || '',
-        photo: data.user.photo || data.user.profilePicture || '',
-        ...data.user
-      };
+        // Create complete user data
+        const userData = {
+          id: data.user._id || data.user.id,
+          _id: data.user._id || data.user.id, 
+          fullName: data.user.fullName || data.user.name || '',
+          name: data.user.fullName || data.user.name || '',
+          email: data.user.email || '',
+          phone: data.user.phone || '',
+          photo: data.user.photo || data.user.profilePicture || '',
+          ...data.user
+        };
 
-      // Save user data
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
-      
-      // ✅ Mark that user has ever logged in (for first time detection)
-      await AsyncStorage.setItem('hasEverLoggedIn', 'true');
-      setUser(userData);
-      setIsAuthenticated(true);
-      console.log('Login successful (pending auth):', userData.email || userData.fullName);
+        // Save user data
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        
+        // FIXED: Mark that user has successfully logged in
+        await AsyncStorage.setItem('hasEverLoggedIn', 'true');
+        
+        // Update states
+        setUser(userData);
+        setIsAuthenticated(true);
+        setIsFirstTime(false); // User is no longer first time after login
+        
+        console.log('Login successful:', userData.email || userData.fullName);
 
-      // 👉 Huwag muna mag setUser / setIsAuthenticated dito
-      return { success: true, data, user: userData };
-    } else {
-      return { success: false, message: data.message || 'Login failed' };
+        return { success: true, data, user: userData };
+      } else {
+        return { success: false, message: data.message || 'Login failed' };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.name === 'TypeError' && error.message.includes('Network request failed')) {
+        return { success: false, message: 'Network error. Please check your internet connection.' };
+      }
+      return { success: false, message: 'Login failed. Please try again.' };
     }
-  } catch (error) {
-    console.error('Login error:', error);
-    if (error.name === 'TypeError' && error.message.includes('Network request failed')) {
-      return { success: false, message: 'Network error. Please check your internet connection.' };
-    }
-    return { success: false, message: 'Login failed. Please try again.' };
-  }
-};
+  };
 
-  // Logout function - ONLY clears current user's data and auth
+  // FIXED: Logout function - keeps hasEverLoggedIn
   const logout = async () => {
     try {
       const currentUserId = user?.id || user?._id;
@@ -203,89 +203,57 @@ const login = async (email, password) => {
         }
       }
       
-      // Only clear auth data - NOT user-specific data like favorites
-      // ✅ Keep hasEverLoggedIn so user doesn't see GetStarted again
-      await clearAuthData();
+      // FIXED: Only clear auth data, keep hasEverLoggedIn
+      await AsyncStorage.multiRemove(['token', 'user']);
       
-      // Reset auth state
+      // Reset auth state but keep first time as false
       setUser(null);
       setIsAuthenticated(false);
-      // Note: We don't reset isFirstTime here because the user has used the app before
+      setShowSplashOnLogout(true); // Show splash animation
+      // isFirstTime stays false since user has used app before
       
-      console.log('Logout completed - user data preserved');
+      console.log('Logout completed - login history preserved');
       return { success: true };
     } catch (error) {
       console.error('Logout error:', error);
       // Fallback: force clear auth data
-      await clearAuthData();
+      await AsyncStorage.multiRemove(['token', 'user']);
       setUser(null);
       setIsAuthenticated(false);
       throw error;
     }
   };
 
-  // Clear only auth data (token & user info) - keeps favorites AND hasEverLoggedIn
+  // Clear only auth data (token & user info) - keeps everything else
   const clearAuthData = async () => {
     try {
       await AsyncStorage.multiRemove(['token', 'user']);
-      console.log('Auth data cleared - favorites and login history preserved');
+      console.log('Auth data cleared - app history preserved');
     } catch (error) {
       console.error('Clear auth data error:', error);
     }
   };
 
-  // Clear ALL app data (use only for complete app reset)
+  // FIXED: Complete app reset function (for dev/admin use only)
   const clearAllAppData = async (userId = null) => {
     try {
-      console.warn('CLEARING ALL APP DATA - This will remove favorites and reset first time!');
+      console.warn('CLEARING ALL APP DATA - This will reset everything!');
       
       // Get all keys first
       const allKeys = await AsyncStorage.getAllKeys();
       
-      // Keys to always clear
-      const basicKeysToRemove = ['token', 'user', 'hasEverLoggedIn']; // ✅ Include hasEverLoggedIn
+      // Clear everything including hasEverLoggedIn
+      await AsyncStorage.clear();
       
-      // User-specific keys to clear if userId provided
-      const userSpecificKeys = [];
-      if (userId) {
-        const userDataKeys = allKeys.filter(key => key.includes(`_${userId}`));
-        userSpecificKeys.push(...userDataKeys);
-      }
-      
-      // Global app keys
-      const globalAppKeys = [
-        'recentSearches',
-        'appCache', 
-        'tempData',
-        'favorites' // Old global favorites
-      ];
-      
-      // Combine all keys to remove
-      const allKeysToRemove = [
-        ...basicKeysToRemove,
-        ...userSpecificKeys,
-        ...globalAppKeys
-      ];
-      
-      // Remove duplicates and filter existing keys
-      const uniqueKeysToRemove = [...new Set(allKeysToRemove)];
-      const existingKeysToRemove = uniqueKeysToRemove.filter(key => allKeys.includes(key));
-      
-      if (existingKeysToRemove.length > 0) {
-        await AsyncStorage.multiRemove(existingKeysToRemove);
-        console.log('Cleared keys:', existingKeysToRemove);
-      }
+      // Reset all states to initial values
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsFirstTime(true); // Reset to true since we cleared everything
+      setShowSplashOnLogout(false);
       
       console.log('All app data cleared - app will show GetStarted on next launch');
     } catch (error) {
       console.error('Clear all app data error:', error);
-      // Fallback: clear essential data
-      try {
-        await AsyncStorage.clear(); // Nuclear option
-        console.log('Storage cleared with nuclear option');
-      } catch (fallbackError) {
-        console.error('Nuclear clear failed:', fallbackError);
-      }
     }
   };
 
@@ -323,15 +291,15 @@ const login = async (email, password) => {
     user,
     isAuthenticated,
     isLoading,
-    initialAuthCheck, // Add this so components know when initial check is done
-    isFirstTime, // New: track if first time opening app
-    showSplashOnLogout, // New: control splash screen on logout
-    setShowSplashOnLogout, // New: function to trigger splash on logout
+    initialAuthCheck,
+    isFirstTime,
+    showSplashOnLogout,
+    setShowSplashOnLogout,
     login,
     logout,
     updateUser,
     checkAuthStatus,
-    clearAllAppData, // Only for admin/dev use
+    clearAllAppData,
     setUser,
     setIsAuthenticated,
   };
