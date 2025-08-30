@@ -60,7 +60,7 @@ export default function RegisterScreen({ navigation }) {
       }
 
       Alert.alert("Success", `Welcome, ${fullName}! Your account has been created.`);
-      navigation.navigate("Login");
+      navigation.navigate("LoginScreen");
     } catch (error) {
       Alert.alert("Registration Error", error.message);
       console.error("Registration Error:", error.message);
@@ -68,7 +68,7 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const handleLoginRedirect = () => {
-    navigation.navigate("Login");
+    navigation.navigate("LoginScreen");
   };
 
   return (

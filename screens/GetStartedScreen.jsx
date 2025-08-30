@@ -18,7 +18,7 @@ const GetStartedScreen = () => {
   const navigation = useNavigation();
 
   const handleGetStarted = () => {
-    navigation.replace('Login');
+    navigation.replace('LoginScreen');
   };
 
   return (
