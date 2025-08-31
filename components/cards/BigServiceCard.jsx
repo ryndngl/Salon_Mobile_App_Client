@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -11,22 +11,26 @@ import {
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useFavorites } from "../../context/FavoritesContext";
 import { getImageSource, extractImages } from "../../utils/imageHelper";
+import ImageView from "../../utils/ImageView";
 
 const screenWidth = Dimensions.get("window").width;
 const cardWidth = (screenWidth - 48) / 2;
 
-const BigServiceCard = ({ 
-  service, 
-  serviceName, 
-  styleData, 
-  onPress, 
-  onImagePress,
+const BigServiceCard = ({
+  service,
+  serviceName,
+  styleData,
+  onPress,
   onBookPress,
   searchCard,
 }) => {
   const { favorites, toggleFavorite } = useFavorites();
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  
+  // 🔥 Image viewer state
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [viewerImageSource, setViewerImageSource] = useState(null);
 
   const actualServiceName = serviceName || service?.name || "Hair Cut";
   const isFootSpaService = actualServiceName.toLowerCase().trim() === "foot spa";
@@ -42,7 +46,18 @@ const BigServiceCard = ({
   };
 
   const handleCardPress = () => onPress?.();
-  const handleImagePress = () => onImagePress?.();
+  
+  const handleImagePress = (image) => {
+    const imageSource = getImageSource(image, actualServiceName);
+    setViewerImageSource(imageSource);
+    setImageViewerVisible(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerVisible(false);
+    setViewerImageSource(null);
+  };
+
   const handleBookPress = () => onBookPress?.();
 
   const handleFavoritePress = () => {
@@ -55,152 +70,182 @@ const BigServiceCard = ({
     return favorites[serviceKey]?.some((fav) => fav.name === styleData?.name);
   };
 
-  // DEBUG: Log the styleData structure
-console.log('BigServiceCard - styleData received:', styleData);
-console.log('BigServiceCard - styleData keys:', styleData ? Object.keys(styleData) : 'styleData is null/undefined');
+  // ✅ Extract images once, before usage
+  const imagesArray = Array.isArray(extractImages(styleData))
+    ? extractImages(styleData)
+    : [];
+  const hasMultipleImages = imagesArray.length > 1;
 
-const imagesArray = extractImages(styleData);
-const hasMultipleImages = imagesArray.length > 1;
-
-console.log('BigServiceCard - imagesArray after extractImages:', imagesArray);
+  // DEBUG logs
+  console.log("BigServiceCard - styleData received:", styleData);
+  console.log(
+    "BigServiceCard - styleData keys:",
+    styleData ? Object.keys(styleData) : "styleData is null/undefined"
+  );
+  console.log("BigServiceCard - imagesArray after extractImages:", imagesArray);
 
   // Foot Spa multi-image layout
   if (isFootSpaService && hasMultipleImages) {
     return (
-      <TouchableOpacity
-        style={styles.footSpaCard}
-        onPress={handleCardPress}
-        activeOpacity={0.8}
-      >
-        <View style={styles.footSpaImagesRow}>
-          {imagesArray.slice(0, 3).map((img, idx) => (
-            <TouchableOpacity key={idx} onPress={handleImagePress}>
-              <Image
-                source={getImageSource(img, actualServiceName)}
-                style={styles.footSpaImage}
-                resizeMode="cover"
-                onLoadStart={handleImageLoadStart}
-                onLoad={handleImageLoad}
-                onError={handleImageError}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.footSpaContent}>
-          <View style={styles.footSpaNamePriceRow}>
-            <Text style={styles.footSpaTitle} numberOfLines={2}>
-              {styleData?.name || "Unnamed Style"}
-            </Text>
-            <Text style={styles.footSpaPrice}>₱{styleData?.price}</Text>
+      <>
+        <TouchableOpacity
+          style={styles.footSpaCard}
+          onPress={handleCardPress}
+          activeOpacity={0.8}
+        >
+          <View style={styles.footSpaImagesRow}>
+            {imagesArray.slice(0, 3).map((img, idx) => (
+              <TouchableOpacity key={idx} onPress={() => handleImagePress(img)}>
+                <Image
+                  source={getImageSource(img, actualServiceName)}
+                  style={styles.footSpaImage}
+                  resizeMode="cover"
+                  onLoadStart={handleImageLoadStart}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              </TouchableOpacity>
+            ))}
           </View>
 
-          {styleData?.description && (
-            <Text style={styles.footSpaDescription} numberOfLines={3}>
-              {styleData.description}
-            </Text>
-          )}
+          <View style={styles.footSpaContent}>
+            <View style={styles.footSpaNamePriceRow}>
+              <Text style={styles.footSpaTitle} numberOfLines={2}>
+                {styleData?.name || "Unnamed Style"}
+              </Text>
+              <Text style={styles.footSpaPrice}>₱{styleData?.price}</Text>
+            </View>
 
-          <View style={styles.footSpaBottomActions}>
-            <TouchableOpacity
-              style={styles.footSpaHeartIcon}
-              onPress={handleFavoritePress}
-            >
-              <Ionicons
-                name={isFavorite() ? "heart" : "heart-outline"}
-                size={24}
-                color={isFavorite() ? "red" : "#555"}
-              />
-            </TouchableOpacity>
+            {styleData?.description && (
+              <Text style={styles.footSpaDescription} numberOfLines={3}>
+                {styleData.description}
+              </Text>
+            )}
 
-            <TouchableOpacity
-              style={styles.footSpaBookButton}
-              onPress={handleBookPress}
-            >
-              <Text style={styles.footSpaBookButtonText}>BOOK NOW</Text>
-            </TouchableOpacity>
+            <View style={styles.footSpaBottomActions}>
+              <TouchableOpacity
+                style={styles.footSpaHeartIcon}
+                onPress={handleFavoritePress}
+              >
+                <Ionicons
+                  name={isFavorite() ? "heart" : "heart-outline"}
+                  size={24}
+                  color={isFavorite() ? "red" : "#555"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.footSpaBookButton}
+                onPress={handleBookPress}
+              >
+                <Text style={styles.footSpaBookButtonText}>BOOK NOW</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {imageLoading && (
-          <View style={styles.imageLoadingOverlay}>
-            <ActivityIndicator size="small" color="#7a0000" />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-  }
-
-  // Default layout for all other services
-  const imageSource = getImageSource(imagesArray[0], actualServiceName);
-
-  return (
-    <TouchableOpacity
-      style={[styles.card, searchCard && styles.searchCard]}
-      onPress={handleCardPress}
-      activeOpacity={0.8}
-    >
-      <View style={[styles.imageWrapper, searchCard && styles.searchImageWrapper]}>
-        <TouchableOpacity onPress={handleImagePress} style={styles.imagePressable}>
-          <Image
-            source={imageSource}
-            style={[styles.image, searchCard && styles.searchImage]}
-            resizeMode="cover"
-            onLoadStart={handleImageLoadStart}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
 
           {imageLoading && (
             <View style={styles.imageLoadingOverlay}>
               <ActivityIndicator size="small" color="#7a0000" />
             </View>
           )}
+        </TouchableOpacity>
 
-          {imageError && (
-            <View style={styles.imageErrorOverlay}>
-              <Ionicons name="image-outline" size={24} color="#999" />
-              <Text style={styles.imageErrorText}>Image unavailable</Text>
+        {/* 🔥 Centralized Image Viewer Modal */}
+        <ImageView
+          visible={imageViewerVisible}
+          image={viewerImageSource}
+          onClose={closeImageViewer}
+        />
+      </>
+    );
+  }
+
+  // Default layout for all other services
+  const firstImage = imagesArray.length > 0 ? imagesArray[0] : styleData?.image;
+  const imageSource = getImageSource(firstImage, actualServiceName);
+
+  return (
+    <>
+      <TouchableOpacity
+        style={[styles.card, searchCard && styles.searchCard]}
+        onPress={handleCardPress}
+        activeOpacity={0.8}
+      >
+        <View
+          style={[styles.imageWrapper, searchCard && styles.searchImageWrapper]}
+        >
+          <TouchableOpacity onPress={() => handleImagePress(firstImage)} style={styles.imagePressable}>
+            <Image
+              source={imageSource}
+              style={[styles.image, searchCard && styles.searchImage]}
+              resizeMode="cover"
+              onLoadStart={handleImageLoadStart}
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+            />
+
+            {imageLoading && (
+              <View style={styles.imageLoadingOverlay}>
+                <ActivityIndicator size="small" color="#7a0000" />
+              </View>
+            )}
+
+            {imageError && (
+              <View style={styles.imageErrorOverlay}>
+                <Ionicons name="image-outline" size={24} color="#999" />
+                <Text style={styles.imageErrorText}>Image unavailable</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.info, searchCard && styles.searchInfo]}>
+          <Text
+            style={[styles.title, searchCard && styles.searchTitle]}
+            numberOfLines={2}
+          >
+            {styleData?.name || "Unnamed Style"}
+          </Text>
+
+          {styleData?.description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {styleData.description}
+            </Text>
+          )}
+
+          {styleData?.price && (
+            <Text style={[styles.price, searchCard && styles.searchPrice]}>
+              ₱{styleData.price}
+            </Text>
+          )}
+
+          {searchCard && onBookPress && (
+            <View style={styles.bottomActions}>
+              <TouchableOpacity style={styles.heartIcon} onPress={handleFavoritePress}>
+                <Ionicons
+                  name={isFavorite() ? "heart" : "heart-outline"}
+                  size={20}
+                  color={isFavorite() ? "red" : "#999"}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.bookButton} onPress={handleBookPress}>
+                <Text style={styles.bookButtonText}>BOOK NOW</Text>
+              </TouchableOpacity>
             </View>
           )}
-        </TouchableOpacity>
-      </View>
+        </View>
+      </TouchableOpacity>
 
-      <View style={[styles.info, searchCard && styles.searchInfo]}>
-        <Text style={[styles.title, searchCard && styles.searchTitle]} numberOfLines={2}>
-          {styleData?.name || "Unnamed Style"}
-        </Text>
-
-        {styleData?.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {styleData.description}
-          </Text>
-        )}
-
-        {styleData?.price && (
-          <Text style={[styles.price, searchCard && styles.searchPrice]}>₱{styleData.price}</Text>
-        )}
-
-        {searchCard && onBookPress && (
-          <View style={styles.bottomActions}>
-            <TouchableOpacity style={styles.heartIcon} onPress={handleFavoritePress}>
-              <Ionicons
-                name={isFavorite() ? "heart" : "heart-outline"}
-                size={20}
-                color={isFavorite() ? "red" : "#999"}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.bookButton} onPress={handleBookPress}>
-              <Text style={styles.bookButtonText}>BOOK NOW</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+      {/* 🔥 Centralized Image Viewer Modal */}
+      <ImageView
+        visible={imageViewerVisible}
+        image={viewerImageSource}
+        onClose={closeImageViewer}
+      />
+    </>
   );
 };
-
 
 const styles = StyleSheet.create({
   card: {
@@ -225,7 +270,6 @@ const styles = StyleSheet.create({
   },
   
   // FOOT SPA CARD STYLES - VERTICAL LAYOUT WITH THREE IMAGES AT TOP
-
   footSpaCard: {
     width: "100%",
     backgroundColor: '#fff',
@@ -304,7 +348,6 @@ const styles = StyleSheet.create({
   },
   
   // Regular Card Styles
-  
   imageWrapper: {
     position: 'relative',
     width: '100%',

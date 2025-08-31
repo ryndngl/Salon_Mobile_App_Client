@@ -8,14 +8,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Modal,
-  Pressable,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useFavorites } from "../../context/FavoritesContext";
 import { extractImages, getImageSource } from "../../utils/imageHelper";
+import ImageView from "../../utils/ImageView";
 
 const screenWidth = Dimensions.get('window').width;
 const cardWidth = (screenWidth - 48) / 2;
@@ -48,28 +47,29 @@ const ServiceDetailScreen = () => {
   const initialCategory = isHairCut ? 'Men' : (isHairColor ? 'Root Touch Up' : null);
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
+
+  // 🔥 Image viewer state
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [viewerImageSource, setViewerImageSource] = useState(null);
 
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  console.log('Full service object received:', JSON.stringify(service, null, 2));
-console.log('Service styles array:', service.styles);
+  const filteredStyles = service.styles.filter((style) => {
+    if (isHairCut || isHairColor) {
+      return style.category === selectedCategory;
+    }
+    return true;
+  });
 
-const filteredStyles = service.styles.filter((style) => {
-  console.log('Processing style:', style.name, 'with data:', style);
-  
-  if (isHairCut || isHairColor) {
-    return style.category === selectedCategory;
-  }
-  return true;
-});
-
-  const openImageModal = (image) => {
-    // Use the imageHelper function directly
+  const openImageViewer = (image) => {
     const imageSource = getImageSource(image, service.name);
-    setSelectedImage(imageSource);
-    setModalVisible(true);
+    setViewerImageSource(imageSource);
+    setImageViewerVisible(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerVisible(false);
+    setViewerImageSource(null);
   };
 
   const goToBooking = (style) => {
@@ -85,13 +85,7 @@ const filteredStyles = service.styles.filter((style) => {
     const hasMultipleImages = imagesArray.length > 1;
     const favorite = isFavorite(service.name, style.name);
 
-    // Debug logging to see what we're getting
-    console.log(`Style: ${style.name}`);
-    console.log('Images array:', imagesArray);
-    console.log('First image:', imagesArray[0]);
-    console.log('Generated source:', getImageSource(imagesArray[0], service.name));
-
-    // Special layout for Foot Spa with multiple images
+    // Special layout for Foot Spa
     if (isFootSpa && hasMultipleImages) {
       return (
         <View key={index} style={styles.footSpaCard}>
@@ -99,19 +93,8 @@ const filteredStyles = service.styles.filter((style) => {
             {imagesArray.slice(0, 3).map((img, idx) => {
               const imageSource = getImageSource(img, service.name);
               return (
-                <TouchableOpacity key={idx} onPress={() => openImageModal(img)}>
-                  <Image
-                    source={imageSource}
-                    style={styles.footSpaImage}
-                    onError={(error) => {
-                      console.log(`Image ${idx} load error:`, error);
-                      console.log('Image source was:', imageSource);
-                      console.log('Original image data:', img);
-                    }}
-                    onLoad={() => {
-                      console.log(`Image ${idx} loaded successfully`);
-                    }}
-                  />
+                <TouchableOpacity key={idx} onPress={() => openImageViewer(img)}>
+                  <Image source={imageSource} style={styles.footSpaImage} />
                 </TouchableOpacity>
               );
             })}
@@ -128,20 +111,10 @@ const filteredStyles = service.styles.filter((style) => {
             )}
 
             <View style={styles.footSpaBottomRow}>
-              <TouchableOpacity
-                onPress={() => toggleFavorite(service, style)}
-                style={styles.footSpaHeartWrapper}
-              >
-                <Ionicons
-                  name={favorite ? 'heart' : 'heart-outline'}
-                  size={24}
-                  color={favorite ? 'red' : '#555'}
-                />
+              <TouchableOpacity onPress={() => toggleFavorite(service, style)} style={styles.footSpaHeartWrapper}>
+                <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={24} color={favorite ? 'red' : '#555'} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.footSpaBookNowButton}
-                onPress={() => goToBooking(style)}
-              >
+              <TouchableOpacity style={styles.footSpaBookNowButton} onPress={() => goToBooking(style)}>
                 <Text style={styles.footSpaBookNowButtonText}>BOOK NOW</Text>
               </TouchableOpacity>
             </View>
@@ -150,26 +123,15 @@ const filteredStyles = service.styles.filter((style) => {
       );
     }
 
-    // Default card rendering
+    // Default card
     const firstImage = imagesArray[0];
     const imageSource = getImageSource(firstImage, service.name);
     
     return (
       <View key={index} style={styles.card}>
-        <TouchableOpacity onPress={() => openImageModal(firstImage)}>
+        <TouchableOpacity onPress={() => openImageViewer(firstImage)}>
           <View style={styles.imageWrapper}>
-            <Image
-              source={imageSource}
-              style={styles.image}
-              onError={(error) => {
-                console.log('Card image load error:', error);
-                console.log('Image source was:', imageSource);
-                console.log('Original image data:', firstImage);
-              }}
-              onLoad={() => {
-                console.log('Card image loaded successfully');
-              }}
-            />
+            <Image source={imageSource} style={styles.image} />
           </View>
         </TouchableOpacity>
 
@@ -184,21 +146,10 @@ const filteredStyles = service.styles.filter((style) => {
           )}
 
           <View style={styles.bottomRow}>
-            <TouchableOpacity
-              onPress={() => toggleFavorite(service, style)}
-              style={styles.heartWrapper}
-            >
-              <Ionicons
-                name={favorite ? 'heart' : 'heart-outline'}
-                size={24}
-                color={favorite ? 'red' : '#555'}
-              />
+            <TouchableOpacity onPress={() => toggleFavorite(service, style)} style={styles.heartWrapper}>
+              <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={24} color={favorite ? 'red' : '#555'} />
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.bookNowButton}
-              onPress={() => goToBooking(style)}
-            >
+            <TouchableOpacity style={styles.bookNowButton} onPress={() => goToBooking(style)}>
               <Text style={styles.bookNowButtonText}>BOOK NOW</Text>
             </TouchableOpacity>
           </View>
@@ -219,18 +170,10 @@ const filteredStyles = service.styles.filter((style) => {
             {categoriesToRender.map((category) => (
               <TouchableOpacity
                 key={category}
-                style={[
-                  styles.tabButton,
-                  selectedCategory === category && styles.activeTab,
-                ]}
+                style={[styles.tabButton, selectedCategory === category && styles.activeTab]}
                 onPress={() => setSelectedCategory(category)}
               >
-                <Text
-                  style={[
-                    styles.tabText,
-                    selectedCategory === category && styles.activeTabText,
-                  ]}
-                >
+                <Text style={[styles.tabText, selectedCategory === category && styles.activeTabText]}>
                   {category}
                 </Text>
               </TouchableOpacity>
@@ -249,23 +192,12 @@ const filteredStyles = service.styles.filter((style) => {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}
-        >
-          <Image
-            source={selectedImage}
-            style={styles.fullscreenImage}
-            resizeMode="contain"
-          />
-        </Pressable>
-      </Modal>
+      {/* 🔥 Centralized Image Viewer Modal */}
+      <ImageView
+        visible={imageViewerVisible}
+        image={viewerImageSource}
+        onClose={closeImageViewer}
+      />
     </SafeAreaView>
   );
 };
@@ -489,18 +421,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
-  },
-  
-  /* --- Modal and Fullscreen Image --- */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullscreenImage: {
-    width: '100%',
-    height: '100%',
   },
   
   /* --- Other Styles --- */

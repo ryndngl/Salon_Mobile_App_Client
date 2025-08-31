@@ -189,81 +189,110 @@ const AuthNavigator = () => {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName={
-        isAuthenticated ? "MainTabs" : isFirstTime ? "GetStarted" : "LoginScreen"
-      }
-      screenOptions={{
-        headerShown: false,
+  <Stack.Navigator
+    initialRouteName={
+      isAuthenticated ? "MainTabs" : isFirstTime ? "GetStarted" : "LoginScreen"
+    }
+    screenOptions={{
+      headerShown: false,
+    }}
+  >
+    {/* UPDATED: Always available screens (including when authenticated) */}
+    <Stack.Screen 
+      name="GetStarted" 
+      component={GetStartedScreen} 
+      options={{ animation: "fade" }}
+    />
+    <Stack.Screen 
+      name="LoginScreen" 
+      component={LoginScreen}
+      options={{ animation: "none" }}   // 🚀 disable animation sa unang load
+    />
+    <Stack.Screen 
+      name="Register" 
+      component={RegisterScreen}
+      options={{ animation: "fade" }}
+    />
+    
+    {/* PASSWORD RESET SCREENS - Always available for deep linking */}
+    <Stack.Screen 
+      name="ForgotPasswordScreen" 
+      component={ForgotPasswordScreen}
+      options={{
+        title: "Forgot Password",
         animation: "fade",
       }}
-    >
-      {/* UPDATED: Always available screens (including when authenticated) */}
-      <Stack.Screen name="GetStarted" component={GetStartedScreen} />
-      <Stack.Screen name="LoginScreen" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      
-      {/* PASSWORD RESET SCREENS - Always available for deep linking */}
-      <Stack.Screen 
-        name="ForgotPasswordScreen" 
-        component={ForgotPasswordScreen}
-        options={{
-          title: "Forgot Password",
-        }}
-      />
-      <Stack.Screen 
-        name="ResetPasswordScreen" 
-        component={ResetPasswordScreen}
-        options={{
-          title: "Reset Password",
-        }}
-      />
-      
-      {/* Help screens - always available */}
-      <Stack.Screen name="FAQs" component={FAQScreen} />
-      <Stack.Screen name="ContactUs" component={ContactUsScreen} />
-      <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+    />
+    <Stack.Screen 
+      name="ResetPasswordScreen" 
+      component={ResetPasswordScreen}
+      options={{
+        title: "Reset Password",
+        animation: "fade",
+      }}
+    />
+    
+    {/* Help screens - always available */}
+    <Stack.Screen 
+      name="FAQs" 
+      component={FAQScreen} 
+      options={{ animation: "fade" }}
+    />
+    <Stack.Screen 
+      name="ContactUs" 
+      component={ContactUsScreen} 
+      options={{ animation: "fade" }}
+    />
+    <Stack.Screen 
+      name="TermsConditions" 
+      component={TermsConditionsScreen} 
+      options={{ animation: "fade" }}
+    />
+    <Stack.Screen 
+      name="PrivacyPolicy" 
+      component={PrivacyPolicyScreen} 
+      options={{ animation: "fade" }}
+    />
 
-      {/* Authenticated screens */}
-      {isAuthenticated && (
-        <>
-          <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
-          <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
-          <Stack.Screen
-            name="ServiceDetailScreen"
-            component={ServiceDetailScreen}
-          />
-          <Stack.Screen name="BookingScreen" component={BookingScreen} />
-          <Stack.Screen
-            name="BookingFormScreen"
-            component={BookingFormScreen}
-            options={{ title: "Booking Details", headerShown: true }}
-          />
-          <Stack.Screen
-            name="BookingSummaryScreen"
-            component={BookingSummaryScreen}
-          />
-          <Stack.Screen
-            name="PaymentMethodScreen"
-            component={PaymentMethodScreen}
-          />
-          <Stack.Screen
-            name="NotificationScreen"
-            component={NotificationScreen}
-            options={{ title: "Notifications", headerShown: true }}
-          />
-          <Stack.Screen
-            name="BookingConfirmationScreen"
-            component={BookingConfirmationScreen}
-          />
-          <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
-          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-        </>
-      )}
-    </Stack.Navigator>
-  );
+    {/* Authenticated screens */}
+    {isAuthenticated && (
+      <>
+        <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+        <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
+        <Stack.Screen
+          name="ServiceDetailScreen"
+          component={ServiceDetailScreen}
+        />
+        <Stack.Screen name="BookingScreen" component={BookingScreen} />
+        <Stack.Screen
+          name="BookingFormScreen"
+          component={BookingFormScreen}
+          options={{ title: "Booking Details", headerShown: true }}
+        />
+        <Stack.Screen
+          name="BookingSummaryScreen"
+          component={BookingSummaryScreen}
+        />
+        <Stack.Screen
+          name="PaymentMethodScreen"
+          component={PaymentMethodScreen}
+        />
+        <Stack.Screen
+          name="NotificationScreen"
+          component={NotificationScreen}
+          options={{ title: "Notifications", headerShown: true }}
+        />
+        <Stack.Screen
+          name="BookingConfirmationScreen"
+          component={BookingConfirmationScreen}
+        />
+        <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
+        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+        <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      </>
+    )}
+  </Stack.Navigator>
+);
 };
 
 // Main App Component
@@ -272,19 +301,16 @@ const AppContent = () => {
   const splashFadeOut = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    let splashTimer;
-    splashTimer = setTimeout(() => {
+    let splashTimer = setTimeout(() => {
       Animated.timing(splashFadeOut, {
         toValue: 0,
-        duration: 800,
+        duration: 600,
         useNativeDriver: true,
       }).start(() => {
         setIsAppReady(true);
       });
-    }, 2000);
-    return () => {
-      if (splashTimer) clearTimeout(splashTimer);
-    };
+    }, 1500);
+    return () => clearTimeout(splashTimer);
   }, []);
 
   if (!isAppReady) {
