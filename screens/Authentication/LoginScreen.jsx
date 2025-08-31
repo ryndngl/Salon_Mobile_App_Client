@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,19 +6,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Modal,
-  Pressable,
   Animated,
   Easing,
   ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginScreen() {
   const navigation = useNavigation();

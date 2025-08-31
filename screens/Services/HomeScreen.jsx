@@ -17,8 +17,8 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
-import BigServiceCard from "../components/cards/BigServiceCard";
-import { useFavorites } from "../context/FavoritesContext";
+import BigServiceCard from "../../components/cards/BigServiceCard";
+import { useFavorites } from "../../context/FavoritesContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const screenWidth = Dimensions.get("window").width;

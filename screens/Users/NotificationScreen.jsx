@@ -1,5 +1,4 @@
 // screens/NotificationScreen.js
-import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList } from 'react-native';
 
 const NotificationScreen = () => {

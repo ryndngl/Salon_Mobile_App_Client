@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useBooking } from "../context/BookingContext";
+import { useBooking } from "../../context/BookingContext";
 
 const timeSlots = [
   "9:00 AM",

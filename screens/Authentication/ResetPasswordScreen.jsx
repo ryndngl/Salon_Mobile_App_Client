@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -105,74 +104,64 @@ export default function ResetPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <ImageBackground
-        source={{
-          uri: "https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background",
-        }}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.overlay}>
-            <View style={styles.card}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-                disabled={loading}
-              >
-                <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
-              </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            disabled={loading}
+          >
+            <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
+          </TouchableOpacity>
 
-              <Text style={styles.title}>Reset Password</Text>
-              <Text style={styles.subtitle}>
-                Enter your new password below. Make sure it's strong and secure.
-              </Text>
+          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.subtitle}>
+            Enter your new password below. Make sure it's strong and secure.
+          </Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="New Password"
-                placeholderTextColor="#888"
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-                editable={!loading}
-              />
+          <TextInput
+            style={styles.input}
+            placeholder="New Password"
+            placeholderTextColor="#888"
+            secureTextEntry
+            value={newPassword}
+            onChangeText={setNewPassword}
+            editable={!loading}
+          />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#888"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                editable={!loading}
-              />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password"
+            placeholderTextColor="#888"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            editable={!loading}
+          />
 
-              <TouchableOpacity
-                style={styles.button}
-                onPress={handleResetPassword}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Update Password</Text>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                disabled={loading}
-              >
-                <Text style={styles.backToLoginText}>
-                  Remember your password?{' '}
-                  <Text style={styles.backToLoginLink}>Back to Login</Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </ImageBackground>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleResetPassword}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Update Password</Text>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            disabled={loading}
+          >
+            <Text style={styles.backToLoginText}>
+              Remember your password?{' '}
+              <Text style={styles.backToLoginLink}>Back to Login</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       <Modal animationType="none" transparent={true} visible={resetSuccessVisible}>
         <View style={styles.successModalContainer}>
@@ -197,25 +186,12 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FCE4EC",
+    backgroundColor: "#fff", // White background
   },
   scrollContainer: {
     flexGrow: 1,
-  },
-  backgroundImage: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    height: "100%",
-  },
-  overlay: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
   },
   card: {
     width: "90%",
@@ -224,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 30,
     borderColor: "#D4D4D4",
-    elevation: 3,
+    elevation: 1.5,
     alignItems: "center",
     position: "relative",
   },

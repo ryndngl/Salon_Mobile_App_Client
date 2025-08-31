@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -20,12 +19,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
-  
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [showTokenEntry, setShowTokenEntry] = useState(false);
   const [manualToken, setManualToken] = useState('');
-  
+
   const [emailSentVisible, setEmailSentVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -121,7 +120,7 @@ export default function ForgotPasswordScreen() {
           style={styles.tokenKeyboard}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.tokenScrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
@@ -196,68 +195,58 @@ export default function ForgotPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ImageBackground
-        source={{
-          uri: 'https://placehold.co/700x1200/FCE4EC/880E4F?text=Salon+Background',
-        }}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.overlay}>
-            <View style={styles.card}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-                disabled={loading}
-              >
-                <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
-              </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            disabled={loading}
+          >
+            <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
+          </TouchableOpacity>
 
-              <Text style={styles.title}>Forgot Password</Text>
-              <Text style={styles.subtitle}>
-                Enter your email address and we'll send you a reset token.
-              </Text>
+          <Text style={styles.title}>Forgot Password</Text>
+          <Text style={styles.subtitle}>
+            Enter your email address and we'll send you a reset token.
+          </Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#888"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                editable={!loading}
-              />
+          <TextInput
+            style={styles.input}
+            placeholder="Email Address"
+            placeholderTextColor="#888"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+            editable={!loading}
+          />
 
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  (!email || loading) && styles.buttonDisabled
-                ]}
-                onPress={handleForgotPassword}
-                disabled={loading || !email}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Send Reset Link</Text>
-                )}
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              (!email || loading) && styles.buttonDisabled
+            ]}
+            onPress={handleForgotPassword}
+            disabled={loading || !email}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Send Reset Link</Text>
+            )}
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                disabled={loading}
-              >
-                <Text style={styles.backToLoginText}>
-                  Remember your password?{' '}
-                  <Text style={styles.backToLoginLink}>Back to Login</Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </ImageBackground>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            disabled={loading}
+          >
+            <Text style={styles.backToLoginText}>
+              Remember your password?{' '}
+              <Text style={styles.backToLoginLink}>Back to Login</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       <Modal
         animationType="none"
@@ -295,25 +284,12 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FCE4EC',
+    backgroundColor: '#fff', // White background
   },
   scrollContainer: {
     flexGrow: 1,
-  },
-  backgroundImage: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   card: {
     width: '90%',
@@ -322,7 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 30,
     borderColor: '#D4D4D4',
-    elevation: 3,
+    elevation: 1.5,
     alignItems: 'center',
     position: 'relative',
   },
@@ -428,7 +404,7 @@ const styles = StyleSheet.create({
   },
   tokenContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
   },
   tokenKeyboard: {
     flex: 1,
@@ -440,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   tokenCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 30,
     elevation: 1.5,

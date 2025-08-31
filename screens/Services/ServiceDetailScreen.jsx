@@ -1,5 +1,5 @@
 // screens/ServiceDetailScreen.js
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,8 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useFavorites } from "../context/FavoritesContext";
-import { extractImages, getImageSource } from "../utils/imageHelper";
+import { useFavorites } from "../../context/FavoritesContext";
+import { extractImages, getImageSource } from "../../utils/imageHelper";
 
 const screenWidth = Dimensions.get('window').width;
 const cardWidth = (screenWidth - 48) / 2;

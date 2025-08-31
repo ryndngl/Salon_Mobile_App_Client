@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   View,
   Text,
@@ -55,7 +54,7 @@ const GetStartedScreen = () => {
         {/* Main Image with Frame */}
         <Animatable.View animation="zoomIn" delay={600} style={styles.imageFrame}>
           <Image
-            source={require('../assets/Salon Banner.webp')}
+            source={require('../../assets/Salon Banner.webp')}
             style={styles.image}
             resizeMode="contain"
           />

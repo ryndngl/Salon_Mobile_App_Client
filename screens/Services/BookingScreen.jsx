@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useBooking } from "../context/BookingContext";
+import { useBooking } from "../../context/BookingContext";
 
 const BookingScreen = () => {
   const navigation = useNavigation();
