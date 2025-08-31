@@ -265,14 +265,14 @@ export default function ForgotPasswordScreen() {
               size={60}
               color="#4CAF50"
             />
-            <Text style={styles.successText}>Email Sent! 📧</Text>
+            <Text style={styles.successText}>Email Sent!</Text>
             <Text style={styles.successSubText}>
               Check your email for the reset token.
             </Text>
             <Text style={styles.successInstructions}>
               • Copy the token from your email{'\n'}
               • We'll ask you to paste it next{'\n'}
-              • Token expires in 1 hour ⏰
+              • Token expires in 15 minutes
             </Text>
           </Animated.View>
         </View>
@@ -284,7 +284,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff', // White background
+    backgroundColor: '#fff', 
   },
   scrollContainer: {
     flexGrow: 1,
