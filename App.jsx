@@ -1,4 +1,3 @@
-// App.jsx
 import * as WebBrowser from "expo-web-browser";
 WebBrowser.maybeCompleteAuthSession();
 
@@ -12,9 +11,6 @@ import {
   ImageBackground,
   StatusBar,
   LogBox,
-  View,
-  Text,
-  ActivityIndicator,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Linking from "expo-linking";
@@ -36,28 +32,36 @@ import { FavoritesProvider } from "./context/FavoritesContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Screens
-import LoginScreen from "./screens/LoginScreen";
-import RegisterScreen from "./screens/RegisterScreen";
-import BottomTabNavigator from "./navigation/BottomTabNavigator";
-import ServicesScreen from "./screens/ServicesScreen";
-import ServiceDetailScreen from "./screens/ServiceDetailScreen";
-import BookingScreen from "./screens/BookingScreen";
-import BookingFormScreen from "./screens/BookingFormScreen";
-import PaymentMethodScreen from "./screens/PaymentMethodScreen";
-import GetStartedScreen from "./screens/GetStartedScreen";
-import NotificationScreen from "./screens/NotificationScreen";
-import BookingSummaryScreen from "./screens/BookingSummaryScreen";
-import BookingConfirmationScreen from "./screens/BookingConfirmationScreen";
-import FavoritesScreen from "./screens/FavoritesScreen";
-import SettingsScreen from "./screens/SettingsScreen";
-import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
-import ResetPasswordScreen from "./screens/ResetPasswordScreen";
+// Authentication
+import LoginScreen from "./screens/Authentication/LoginScreen";
+import RegisterScreen from "./screens/Authentication/RegisterScreen";
+import GetStartedScreen from "./screens/Authentication/GetStartedScreen";
+import ForgotPasswordScreen from "./screens/Authentication/ForgotPasswordScreen";
+import ResetPasswordScreen from "./screens/Authentication/ResetPasswordScreen";
 
-// Help & Support Screens
-import FAQScreen from "./screens/FAQScreen";
-import ContactUsScreen from "./screens/ContactUsScreen";
-import TermsConditionsScreen from "./screens/TermsConditionsScreen";
-import PrivacyPolicyScreen from "./screens/PrivacyPolicyScreen";
+// Services
+import ServicesScreen from "./screens/Services/ServicesScreen";
+import ServiceDetailScreen from "./screens/Services/ServiceDetailScreen";
+import BookingScreen from "./screens/Services/BookingScreen";
+import BookingFormScreen from "./screens/Services/BookingFormScreen";
+import PaymentMethodScreen from "./screens/Services/PaymentMethodScreen";
+import BookingSummaryScreen from "./screens/Services/BookingSummaryScreen";
+import BookingConfirmationScreen from "./screens/Services/BookingConfirmationScreen";
+
+// Users
+import FavoritesScreen from "./screens/Users/FavoritesScreen";
+import NotificationScreen from "./screens/Users/NotificationScreen";
+import SettingsScreen from "./screens/Users/SettingsScreen";
+import ProfileScreen from "./screens/Users/ProfileScreen";
+
+// Support
+import FAQScreen from "./screens/Support/FAQScreen";
+import ContactUsScreen from "./screens/Support/ContactUsScreen";
+import TermsConditionsScreen from "./screens/Users/TermsConditionsScreen";
+import PrivacyPolicyScreen from "./screens/Users/PrivacyPolicyScreen";
+
+// Top-level Navigators
+import BottomTabNavigator from "./navigation/BottomTabNavigator";
 
 const Stack = createNativeStackNavigator();
 const { width, height } = Dimensions.get("window");
@@ -162,18 +166,11 @@ const AuthNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
         <ImageBackground
           source={require("./assets/SplashScreenImage/BGIMG.jpg")}
           style={styles.backgroundImage}
-          imageStyle={styles.backgroundImageStyle}
-        >
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#d13f3f" />
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
+          imageStyle={styles.backgroundImageStyle}>
         </ImageBackground>
-      </View>
     );
   }
 
@@ -262,6 +259,7 @@ const AuthNavigator = () => {
           />
           <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
         </>
       )}
     </Stack.Navigator>
@@ -322,12 +320,6 @@ const AppContent = () => {
               }
             }
           }}
-          fallback={
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#d13f3f" />
-              <Text style={styles.loadingText}>Loading navigation...</Text>
-            </View>
-          }
         >
           <AuthNavigator />
           <StatusBar style="dark" />
@@ -368,17 +360,5 @@ const styles = StyleSheet.create({
   },
   backgroundImageStyle: {
     resizeMode: "cover",
-  },
-  loadingOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#d13f3f",
-    fontWeight: "500",
   },
 });
