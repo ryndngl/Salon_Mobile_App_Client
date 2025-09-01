@@ -24,11 +24,11 @@ const BigServiceCard = ({
   onBookPress,
   searchCard,
 }) => {
-  const { favorites, toggleFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   
-  // 🔥 Image viewer state
+  // Image viewer state
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [viewerImageSource, setViewerImageSource] = useState(null);
 
@@ -60,17 +60,31 @@ const BigServiceCard = ({
 
   const handleBookPress = () => onBookPress?.();
 
-  const handleFavoritePress = () => {
-    const serviceKey = service?._id || actualServiceName;
-    toggleFavorite(serviceKey, styleData);
+  // FIXED: Create proper service object and use correct isFavorite check
+  const handleFavoritePress = async () => {
+    // Create a proper service object
+    const serviceObj = service || { name: actualServiceName };
+    
+    // Create a proper style object with all necessary data
+    const styleObj = {
+      ...styleData,
+      // Ensure we have extracted images properly
+      ...(isFootSpaService && { images: extractImages(styleData) })
+    };
+
+    try {
+      await toggleFavorite(serviceObj, styleObj);
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
   };
 
-  const isFavorite = () => {
-    const serviceKey = service?._id || actualServiceName;
-    return favorites[serviceKey]?.some((fav) => fav.name === styleData?.name);
+  // FIXED: Use the correct parameters for isFavorite check
+  const checkIsFavorite = () => {
+    return isFavorite(actualServiceName, styleData?.name);
   };
 
-  // ✅ Extract images once, before usage
+  // Extract images once, before usage
   const imagesArray = Array.isArray(extractImages(styleData))
     ? extractImages(styleData)
     : [];
@@ -128,9 +142,9 @@ const BigServiceCard = ({
                 onPress={handleFavoritePress}
               >
                 <Ionicons
-                  name={isFavorite() ? "heart" : "heart-outline"}
+                  name={checkIsFavorite() ? "heart" : "heart-outline"}
                   size={24}
-                  color={isFavorite() ? "red" : "#555"}
+                  color={checkIsFavorite() ? "red" : "#555"}
                 />
               </TouchableOpacity>
 
@@ -150,7 +164,7 @@ const BigServiceCard = ({
           )}
         </TouchableOpacity>
 
-        {/* 🔥 Centralized Image Viewer Modal */}
+        {/* Centralized Image Viewer Modal */}
         <ImageView
           visible={imageViewerVisible}
           image={viewerImageSource}
@@ -223,9 +237,9 @@ const BigServiceCard = ({
             <View style={styles.bottomActions}>
               <TouchableOpacity style={styles.heartIcon} onPress={handleFavoritePress}>
                 <Ionicons
-                  name={isFavorite() ? "heart" : "heart-outline"}
+                  name={checkIsFavorite() ? "heart" : "heart-outline"}
                   size={20}
-                  color={isFavorite() ? "red" : "#999"}
+                  color={checkIsFavorite() ? "red" : "#999"}
                 />
               </TouchableOpacity>
 
@@ -237,7 +251,7 @@ const BigServiceCard = ({
         </View>
       </TouchableOpacity>
 
-      {/* 🔥 Centralized Image Viewer Modal */}
+      {/* Centralized Image Viewer Modal */}
       <ImageView
         visible={imageViewerVisible}
         image={viewerImageSource}

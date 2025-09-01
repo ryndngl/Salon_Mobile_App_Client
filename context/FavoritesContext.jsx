@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from './AuthContext';
+import { extractImages } from '../utils/imageHelper'; // Import your image helper
 
 const FavoritesContext = createContext();
 
@@ -97,16 +98,17 @@ export const FavoritesProvider = ({ children }) => {
     }
   }, [isAuthenticated, user?.id, user?._id, user?.email]);
 
-  // Unified item identification
+  // FIXED: Improved item identification that handles both service name and style name properly
   const getItemKey = (service, style) => {
     if (!service?.name || !style?.name) {
       console.warn("Attempting to get key for invalid item:", { service, style });
       return null;
     }
-    return `${service.name}|${style.name}`.toLowerCase();
+    // Create a consistent key using service name and style name
+    return `${service.name.toLowerCase().trim()}|${style.name.toLowerCase().trim()}`;
   };
 
-  // Robust toggle function with immediate save
+  // FIXED: Enhanced toggle function with proper data structure handling
   const toggleFavorite = async (service, style) => {
     try {
       if (!isAuthenticated || !user) {
@@ -120,23 +122,43 @@ export const FavoritesProvider = ({ children }) => {
       let updatedFavorites;
       
       setFavorites(prev => {
-        const exists = prev.some(item => 
+        const existingIndex = prev.findIndex(item => 
           getItemKey(item.service, item) === key
         );
 
-        if (exists) {
-          updatedFavorites = prev.filter(item => 
-            getItemKey(item.service, item) !== key
-          );
+        if (existingIndex >= 0) {
+          // Remove from favorites
+          updatedFavorites = prev.filter((_, index) => index !== existingIndex);
           console.log(`Removed ${service.name} - ${style.name} from favorites`);
         } else {
-          updatedFavorites = [...prev, { 
-            ...style, 
-            service,
+          // Add to favorites with proper structure
+          const favoriteItem = {
+            ...style,
+            service: {
+              ...service,
+              name: service.name
+            },
             timestamp: new Date().toISOString(),
-            userId: user?.id || user?._id
-          }];
-          console.log(`Added ${service.name} - ${style.name} to favorites`);
+            userId: user?.id || user?._id,
+            
+            // FIXED: Handle images properly for different service types
+            ...(style.images && Array.isArray(style.images) && style.images.length > 0 
+              ? { images: style.images } 
+              : style.image 
+                ? { image: style.image }
+                : extractImages && extractImages(style) 
+                  ? (() => {
+                      const extracted = extractImages(style);
+                      return Array.isArray(extracted) && extracted.length > 1 
+                        ? { images: extracted }
+                        : { image: extracted[0] || extracted };
+                    })()
+                  : {}
+            )
+          };
+          
+          updatedFavorites = [...prev, favoriteItem];
+          console.log(`Added ${service.name} - ${style.name} to favorites`, favoriteItem);
         }
         
         // Save immediately after updating
@@ -152,16 +174,17 @@ export const FavoritesProvider = ({ children }) => {
     }
   };
 
-  // Optimized check
+  // FIXED: Simplified and more reliable isFavorite check
   const isFavorite = (serviceName, styleName) => {
     if (!serviceName || !styleName || !isAuthenticated) {
       return false;
     }
 
-    const key = `${serviceName}|${styleName}`.toLowerCase();
-    return favorites.some(item => 
-      getItemKey(item.service, item) === key
-    );
+    const key = `${serviceName.toLowerCase().trim()}|${styleName.toLowerCase().trim()}`;
+    return favorites.some(item => {
+      const itemKey = getItemKey(item.service, item);
+      return itemKey === key;
+    });
   };
 
   // Add to favorites function

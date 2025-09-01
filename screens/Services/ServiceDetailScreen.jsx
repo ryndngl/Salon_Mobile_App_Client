@@ -48,7 +48,7 @@ const ServiceDetailScreen = () => {
 
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
 
-  // 🔥 Image viewer state
+  // Image viewer state
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [viewerImageSource, setViewerImageSource] = useState(null);
 
@@ -80,9 +80,26 @@ const ServiceDetailScreen = () => {
     });
   };
 
+  // FIXED: Proper favorites handling
+  const handleToggleFavorite = async (style) => {
+    try {
+      // Create proper style object with images for Foot Spa
+      const styleObj = {
+        ...style,
+        // Ensure we have extracted images properly for multi-image services
+        ...(isFootSpa && { images: extractImages(style) })
+      };
+      
+      await toggleFavorite(service, styleObj);
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
   const renderCard = (style, index) => {
     const imagesArray = extractImages(style);
     const hasMultipleImages = imagesArray.length > 1;
+    // FIXED: Use correct parameters for isFavorite check
     const favorite = isFavorite(service.name, style.name);
 
     // Special layout for Foot Spa
@@ -111,7 +128,7 @@ const ServiceDetailScreen = () => {
             )}
 
             <View style={styles.footSpaBottomRow}>
-              <TouchableOpacity onPress={() => toggleFavorite(service, style)} style={styles.footSpaHeartWrapper}>
+              <TouchableOpacity onPress={() => handleToggleFavorite(style)} style={styles.footSpaHeartWrapper}>
                 <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={24} color={favorite ? 'red' : '#555'} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.footSpaBookNowButton} onPress={() => goToBooking(style)}>
@@ -146,7 +163,7 @@ const ServiceDetailScreen = () => {
           )}
 
           <View style={styles.bottomRow}>
-            <TouchableOpacity onPress={() => toggleFavorite(service, style)} style={styles.heartWrapper}>
+            <TouchableOpacity onPress={() => handleToggleFavorite(style)} style={styles.heartWrapper}>
               <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={24} color={favorite ? 'red' : '#555'} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.bookNowButton} onPress={() => goToBooking(style)}>
@@ -192,7 +209,7 @@ const ServiceDetailScreen = () => {
         </View>
       </ScrollView>
 
-      {/* 🔥 Centralized Image Viewer Modal */}
+      {/* Centralized Image Viewer Modal */}
       <ImageView
         visible={imageViewerVisible}
         image={viewerImageSource}
