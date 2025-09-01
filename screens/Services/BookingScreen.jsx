@@ -177,7 +177,7 @@ const BookingScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>
-              Are you sure you want to cancel your booking?
+              Are you sure you want to cancel your booking? This action cannot be undone.
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -210,8 +210,8 @@ const BookingScreen = () => {
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>
               {actionType === "deleteSingle"
-                ? "Are you sure you want to delete this booking?"
-                : "Are you sure you want to delete all cancelled bookings?"}
+? "Are you sure you want to delete this booking? This action cannot be undone."
+: "Are you sure you want to delete all cancelled bookings? This action cannot be undone."}
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
