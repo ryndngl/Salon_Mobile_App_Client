@@ -232,7 +232,7 @@ export default function ForgotPasswordScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Send Reset Link</Text>
+              <Text style={styles.buttonText}>Reset Password</Text>
             )}
           </TouchableOpacity>
 
@@ -271,8 +271,6 @@ export default function ForgotPasswordScreen() {
             </Text>
             <Text style={styles.successInstructions}>
               • Copy the token from your email{'\n'}
-              • We'll ask you to paste it next{'\n'}
-              • Token expires in 15 minutes
             </Text>
           </Animated.View>
         </View>
