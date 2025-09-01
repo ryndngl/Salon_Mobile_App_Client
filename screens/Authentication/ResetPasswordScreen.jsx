@@ -198,6 +198,8 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     backgroundColor: "#fff",
     borderRadius: 20,
+    borderColor: "#D4D4D4",
+    borderWidth: 1,
     padding: 30,
     borderColor: "#D4D4D4",
     elevation: 1.5,
