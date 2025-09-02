@@ -345,31 +345,38 @@ const HomeScreen = () => {
     },
   ];
 
-  const handleServicePress = async (serviceName) => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const selectedService = await response.json();
-      
-      if (selectedService) {
-        navigation.navigate("ServiceDetailScreen", { service: selectedService });
-      } else {
-        Alert.alert("Service Not Found", "This service is not available yet.");
-      }
-      
-    } catch (error) {
-      console.error('Error fetching service:', error);
-      Alert.alert("Error", "Failed to load service details. Please try again.");
-    } finally {
-      setLoading(false);
+  // FIXED handleServicePress function sa HomeScreen mo
+const handleServicePress = async (serviceName) => {
+  try {
+    setLoading(true);
+    
+    const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const apiResponse = await response.json();
+    console.log("API Response:", apiResponse); // Debug log
+    
+    // FIXED: Extract the actual service data from the API response
+    const selectedService = apiResponse.data || apiResponse;
+    console.log("Extracted Service:", selectedService); // Debug log
+    
+    if (selectedService && selectedService.name) {
+      // Pass the extracted service data, not the whole API response
+      navigation.navigate("ServiceDetailScreen", { service: selectedService });
+    } else {
+      Alert.alert("Service Not Found", "This service is not available yet.");
+    }
+    
+  } catch (error) {
+    console.error('Error fetching service:', error);
+    Alert.alert("Error", "Failed to load service details. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Image source handler for API images
   const getImageSource = (imageData) => {
