@@ -1,4 +1,4 @@
-// HomeScreen.jsx - Updated with backend integration
+// HomeScreen.jsx - Updated with testimonial backend integration
 import { useState, useEffect } from "react";
 import {
   View,
@@ -35,22 +35,26 @@ const HomeScreen = () => {
   // State variables
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
-  const [displayName, setDisplayName] = useState(""); // Binago sa walang default na pangalan
+  const [displayName, setDisplayName] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [servicesData, setServicesData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [userToken, setUserToken] = useState(null);
 
-  // Testimonial states
+  // Testimonial states - Updated for backend integration
   const [testimonials, setTestimonials] = useState([]);
+  const [userTestimonials, setUserTestimonials] = useState([]);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
   const [newTestimonial, setNewTestimonial] = useState({
     name: "",
     feedback: "",
+    rating: 5
   });
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [testimonialLoading, setTestimonialLoading] = useState(false);
 
   // API Functions
   const fetchServices = async () => {
@@ -88,6 +92,117 @@ const HomeScreen = () => {
       setServicesData(fallbackServices);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Fetch all testimonials (public)
+  const fetchTestimonials = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        setTestimonials(result.data || []);
+      } else {
+        console.warn('Failed to fetch testimonials');
+      }
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+    }
+  };
+
+  // NEW: Fetch user's own testimonials
+  const fetchUserTestimonials = async () => {
+    if (!userToken) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials/my-testimonials`, {
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setUserTestimonials(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user testimonials:', error);
+    }
+  };
+
+  // NEW: Create testimonial
+  const createTestimonial = async (testimonialData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testimonialData),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        return { success: true, data: result.data };
+      } else {
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error('Error creating testimonial:', error);
+      return { success: false, message: 'Network error occurred' };
+    }
+  };
+
+  // NEW: Update testimonial
+  const updateTestimonial = async (testimonialId, testimonialData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testimonialData),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        return { success: true, data: result.data };
+      } else {
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error('Error updating testimonial:', error);
+      return { success: false, message: 'Network error occurred' };
+    }
+  };
+
+  // NEW: Delete testimonial
+  const deleteTestimonial = async (testimonialId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        return { success: true };
+      } else {
+        return { success: false, message: result.message };
+      }
+    } catch (error) {
+      console.error('Error deleting testimonial:', error);
+      return { success: false, message: 'Network error occurred' };
     }
   };
 
@@ -145,30 +260,38 @@ const HomeScreen = () => {
     }
   };
 
-
   // Effects
   useEffect(() => {
     const loadUserData = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
-        if (storedUser) {
+        const storedToken = await AsyncStorage.getItem("token"); // Assuming you store token separately
+        
+        if (storedUser && storedToken) {
           const userObj = JSON.parse(storedUser);
           const userName = userObj.fullName || userObj.name || userObj.displayName;
           setDisplayName(userName || "User");
+          setUserToken(storedToken);
         } else {
-          // I-redirect ang user sa login screen kung walang user na nakita
-          navigation.replace('LoginScreen'); // I-replace ang 'LoginScreen' sa pangalan ng iyong login screen
+          navigation.replace('LoginScreen');
         }
       } catch (error) {
         console.error("Failed to load user data:", error);
-        // I-redirect ang user sa login screen kung may error sa pagkuha ng data
         navigation.replace('LoginScreen');
       }
     };
 
     loadUserData();
     fetchServices();
-  }, [navigation]); // Idagdag ang navigation sa dependency array para sa useEffect
+    fetchTestimonials(); // Fetch public testimonials
+  }, [navigation]);
+
+  // Fetch user testimonials when token is available
+  useEffect(() => {
+    if (userToken) {
+      fetchUserTestimonials();
+    }
+  }, [userToken]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -267,51 +390,67 @@ const HomeScreen = () => {
     }
   };
 
-  // Testimonial functions (keeping your existing code)
-  const handleAddTestimonial = () => {
+  // UPDATED: Testimonial functions with backend integration
+  const handleAddTestimonial = async () => {
     if (!newTestimonial.name.trim() || !newTestimonial.feedback.trim()) {
       Alert.alert("Error", "Please fill in both name and feedback fields.");
       return;
     }
 
-    const newId = Date.now();
-    const testimonialToAdd = {
-      id: newId,
+    setTestimonialLoading(true);
+
+    const result = await createTestimonial({
       name: newTestimonial.name.trim(),
       feedback: newTestimonial.feedback.trim(),
-      isDefault: false,
-      dateAdded: new Date().toISOString(),
-    };
+      rating: newTestimonial.rating || 5
+    });
 
-    setTestimonials([...testimonials, testimonialToAdd]);
-    setNewTestimonial({ name: "", feedback: "" });
-    setShowTestimonialModal(false);
+    setTestimonialLoading(false);
 
-    Alert.alert("Success", "Your testimonial has been added!");
+    if (result.success) {
+      setNewTestimonial({ name: "", feedback: "", rating: 5 });
+      setShowTestimonialModal(false);
+      
+      // Refresh testimonials
+      fetchTestimonials();
+      fetchUserTestimonials();
+      
+      Alert.alert("Success", "Your testimonial has been added!");
+    } else {
+      Alert.alert("Error", result.message || "Failed to add testimonial");
+    }
   };
 
-  const handleEditTestimonial = () => {
+  const handleEditTestimonial = async () => {
     if (!newTestimonial.name.trim() || !newTestimonial.feedback.trim()) {
       Alert.alert("Error", "Please fill in both name and feedback fields.");
       return;
     }
 
-    const updatedTestimonials = testimonials.map((t) =>
-      t.id === editingId
-        ? {
-            ...t,
-            name: newTestimonial.name.trim(),
-            feedback: newTestimonial.feedback.trim(),
-          }
-        : t
-    );
+    setTestimonialLoading(true);
 
-    setTestimonials(updatedTestimonials);
-    resetTestimonialModal();
-    Alert.alert("Success", "Testimonial updated successfully!");
+    const result = await updateTestimonial(editingId, {
+      name: newTestimonial.name.trim(),
+      feedback: newTestimonial.feedback.trim(),
+      rating: newTestimonial.rating || 5
+    });
+
+    setTestimonialLoading(false);
+
+    if (result.success) {
+      resetTestimonialModal();
+      
+      // Refresh testimonials
+      fetchTestimonials();
+      fetchUserTestimonials();
+      
+      Alert.alert("Success", "Testimonial updated successfully!");
+    } else {
+      Alert.alert("Error", result.message || "Failed to update testimonial");
+    }
   };
 
-  const handleDeleteTestimonial = (id) => {
+  const handleDeleteTestimonial = (testimonialId) => {
     Alert.alert(
       "Delete Testimonial",
       "Are you sure you want to delete this testimonial?",
@@ -320,9 +459,18 @@ const HomeScreen = () => {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            const updatedTestimonials = testimonials.filter((t) => t.id !== id);
-            setTestimonials(updatedTestimonials);
+          onPress: async () => {
+            const result = await deleteTestimonial(testimonialId);
+            
+            if (result.success) {
+              // Refresh testimonials
+              fetchTestimonials();
+              fetchUserTestimonials();
+              
+              Alert.alert("Success", "Testimonial deleted successfully!");
+            } else {
+              Alert.alert("Error", result.message || "Failed to delete testimonial");
+            }
           },
         },
       ]
@@ -333,52 +481,68 @@ const HomeScreen = () => {
     setNewTestimonial({
       name: testimonial.name,
       feedback: testimonial.feedback,
+      rating: testimonial.rating || 5
     });
-    setEditingId(testimonial.id);
+    setEditingId(testimonial._id);
     setIsEditMode(true);
     setShowTestimonialModal(true);
   };
 
   const resetTestimonialModal = () => {
-    setNewTestimonial({ name: "", feedback: "" });
+    setNewTestimonial({ name: "", feedback: "", rating: 5 });
     setShowTestimonialModal(false);
     setIsEditMode(false);
     setEditingId(null);
   };
 
-  // Render functions (keeping your existing render functions)
-  const renderTestimonialCard = (item, index) => (
-    <View key={index} style={styles.testimonialCard}>
+  // UPDATED: Render functions with backend data
+  const renderTestimonialCard = (item, index, isUserTestimonial = false) => (
+    <View key={item._id || index} style={styles.testimonialCard}>
       <View style={styles.testimonialHeader}>
         <View style={styles.testimonialUserInfo}>
           <Text style={styles.testimonialName}>{item.name}</Text>
           <Text style={styles.testimonialDate}>
-            {new Date(item.dateAdded).toLocaleDateString()}
+            {new Date(item.createdAt).toLocaleDateString()}
           </Text>
+          {/* Rating display */}
+          <View style={styles.ratingContainer}>
+            {[...Array(5)].map((_, i) => (
+              <Icon
+                key={i}
+                name={i < (item.rating || 5) ? "star" : "star-outline"}
+                size={16}
+                color="#ffcc00"
+              />
+            ))}
+          </View>
         </View>
 
-        <View style={styles.testimonialActions}>
-          <TouchableOpacity
-            onPress={() => openEditModal(item)}
-            style={styles.actionButton}
-          >
-            <Icon name="pencil" size={18} color="#007d3f" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => handleDeleteTestimonial(item.id)}
-            style={styles.actionButton}
-          >
-            <Icon name="trash" size={18} color="#d13f3f" />
-          </TouchableOpacity>
-        </View>
+        {isUserTestimonial && (
+          <View style={styles.testimonialActions}>
+            <TouchableOpacity
+              onPress={() => openEditModal(item)}
+              style={styles.actionButton}
+            >
+              <Icon name="pencil" size={18} color="#007d3f" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleDeleteTestimonial(item._id)}
+              style={styles.actionButton}
+            >
+              <Icon name="trash" size={18} color="#d13f3f" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <Text style={styles.testimonialMessage}>{item.feedback}</Text>
 
-      <View style={styles.userBadge}>
-        <Icon name="person" size={12} color="#007d3f" />
-        <Text style={styles.userBadgeText}>Your Review</Text>
-      </View>
+      {isUserTestimonial && (
+        <View style={styles.userBadge}>
+          <Icon name="person" size={12} color="#007d3f" />
+          <Text style={styles.userBadgeText}>Your Review</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -424,22 +588,40 @@ const HomeScreen = () => {
             {newTestimonial.feedback.length}/200 characters
           </Text>
 
+          {/* Rating selector */}
+          <Text style={styles.inputLabel}>Rating</Text>
+          <View style={styles.ratingSelector}>
+            {[1, 2, 3, 4, 5].map((rating) => (
+              <TouchableOpacity
+                key={rating}
+                onPress={() => setNewTestimonial(prev => ({ ...prev, rating }))}
+                style={styles.starButton}
+              >
+                <Icon
+                  name={rating <= (newTestimonial.rating || 5) ? "star" : "star-outline"}
+                  size={32}
+                  color="#ffcc00"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={[styles.modalButton, styles.cancelButton]}
               onPress={resetTestimonialModal}
+              disabled={testimonialLoading}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.modalButton, styles.submitButton]}
-              onPress={
-                isEditMode ? handleEditTestimonial : handleAddTestimonial
-              }
+              onPress={isEditMode ? handleEditTestimonial : handleAddTestimonial}
+              disabled={testimonialLoading}
             >
               <Text style={styles.submitButtonText}>
-                {isEditMode ? "Update" : "Submit"}
+                {testimonialLoading ? "Processing..." : (isEditMode ? "Update" : "Submit")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -503,21 +685,41 @@ const HomeScreen = () => {
         ))}
       </View>
 
-      {/* Testimonials Section */}
+      {/* UPDATED: Testimonials Section with backend integration */}
       <View style={styles.testimonialsSection}>
         <View style={styles.testimonialTitleContainer}>
           <Text style={styles.testimonialTitle}>What Our Clients Say</Text>
           <TouchableOpacity
             style={styles.addTestimonialButton}
             onPress={() => setShowTestimonialModal(true)}
+            disabled={testimonialLoading}
           >
             <Icon name="add-circle" size={24} color="#007d3f" />
             <Text style={styles.addTestimonialText}>Add Review</Text>
           </TouchableOpacity>
         </View>
 
+        {/* User's own testimonials first */}
+        {userTestimonials.length > 0 && (
+          <View style={styles.userTestimonialsSection}>
+            <Text style={styles.sectionSubtitle}>Your Reviews</Text>
+            {userTestimonials.map((item, index) => 
+              renderTestimonialCard(item, index, true)
+            )}
+          </View>
+        )}
+
+        {/* All testimonials */}
         {testimonials.length > 0 ? (
-          testimonials.map((item, index) => renderTestimonialCard(item, index))
+          <View style={styles.allTestimonialsSection}>
+            <Text style={styles.sectionSubtitle}>
+              {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
+            </Text>
+            {testimonials
+              .filter(testimonial => !userTestimonials.some(ut => ut._id === testimonial._id))
+              .map((item, index) => renderTestimonialCard(item, index, false))
+            }
+          </View>
         ) : (
           <View style={styles.emptyTestimonials}>
             <Icon name="chatbubbles-outline" size={48} color="#ccc" />
@@ -799,7 +1001,8 @@ const styles = StyleSheet.create({
     marginTop: 5,
     paddingHorizontal: 5,
   },
-  // Testimonials section
+
+  // UPDATED: Testimonials section with new styles for backend integration
   testimonialsSection: {
     marginTop: 20,
   },
@@ -832,6 +1035,22 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 4,
   },
+
+  // NEW: Section separators
+  userTestimonialsSection: {
+    marginBottom: 20,
+  },
+  allTestimonialsSection: {
+    marginTop: 10,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#666",
+    marginBottom: 10,
+    paddingLeft: 5,
+  },
+
   testimonialCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -872,7 +1091,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
     lineHeight: 20,
+    marginTop: 8,
   },
+
+  // NEW: Rating display
+  ratingContainer: {
+    flexDirection: "row",
+    marginTop: 4,
+  },
+
   userBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -937,6 +1164,18 @@ const styles = StyleSheet.create({
     color: "#888",
     marginTop: 4,
   },
+
+  // NEW: Rating selector
+  ratingSelector: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  starButton: {
+    paddingHorizontal: 5,
+  },
+
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -981,6 +1220,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     lineHeight: 22,
+  },
+
+  // NEW: Loading state
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
   },
 });
 
