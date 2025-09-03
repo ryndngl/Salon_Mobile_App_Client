@@ -23,10 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const screenWidth = Dimensions.get("window").width;
 
-// API Configuration - Change this to your server URL
-const API_BASE_URL = 'http://192.168.100.6:5000/api'; // Replace with your actual server IP
-// For Android Emulator use: http://10.0.2.2:3000/api
-// For iOS Simulator use: http://localhost:3000/api
+const API_BASE_URL = 'http://192.168.100.6:5000/api'; 
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -87,7 +84,26 @@ const HomeScreen = () => {
           name: "Hair Color",
           styles: [],
         },
-        // Add other fallback services as needed
+        {
+          _id: "3", 
+          name: "Hair Treatment",
+          styles: [],
+        },
+        {
+          _id: "4", 
+          name: "Rebond & Forms",
+          styles: [],
+        },
+        {
+          _id: "5", 
+          name: "Nail Care",
+          styles: [],
+        },
+        {
+          _id: "6", 
+          name: "Foot Spa",
+          styles: [],
+        },
       ];
       setServicesData(fallbackServices);
     } finally {
@@ -669,28 +685,38 @@ const handleServicePress = async (serviceName) => {
         </Text>
       </View>
 
-      <Text style={styles.servicesTitle}>Our Services</Text>
-      <View style={styles.servicesContainer}>
-        {displayServices.map((service, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.serviceCard}
-            onPress={() => handleServicePress(service.name)}
-            activeOpacity={0.85}
-            disabled={loading}
-          >
-            <Image
-              source={{ uri: service.image }}
-              style={styles.serviceImage}
-              resizeMode="cover"
-            />
-            <View style={styles.serviceLabelContainer}>
-            <Text style={styles.serviceText}>{service.name}</Text>
-            <Text style={styles.serviceDescription}>{service.description}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+<Text style={styles.servicesTitle}>Our Services</Text>
+<View style={styles.servicesContainer}>
+  {displayServices.map((service, index) => (
+    <TouchableOpacity
+      key={index}
+      style={[
+        styles.serviceCard,
+        loading && styles.serviceCardDisabled
+      ]}
+      onPress={() => handleServicePress(service.name)}
+      activeOpacity={0.8}
+      disabled={loading}
+    >
+      <View style={styles.serviceImageContainer}>
+        <Image
+          source={{ uri: service.image }}
+          style={styles.serviceImage}
+          resizeMode="cover"
+        />
       </View>
+      
+      <View style={styles.serviceContent}>
+        <Text style={styles.serviceTitle} numberOfLines={2}>
+          {service.name}
+        </Text>
+        <Text style={styles.serviceDescription} numberOfLines={3}>
+          {service.description}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  ))}
+</View>
 
       {/* UPDATED: Testimonials Section with backend integration */}
       <View style={styles.testimonialsSection}>
@@ -954,61 +980,89 @@ const styles = StyleSheet.create({
   },
 
   // Section for the list of services
-  servicesTitle: {
-    fontSize: 24,
-    fontWeight: "700",
+servicesTitle: {
+    fontSize: 28,
+    fontWeight: "800",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 25,
+    marginTop: 15,
     color: "#d13f3f",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 1.8,
+    textShadowColor: 'rgba(0, 0, 0, 0.08)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
+
+  // Container
   servicesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: 15,
-  },
-  serviceCard: {
-    width: "48%",
-    height: 210,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    marginBottom: 18,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#D4D4D4",
-    elevation: 1,
-    alignItems: "center",
-  },
-  serviceImage: {
-    width: "100%",
-    height: "65%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  serviceLabelContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    paddingHorizontal: 5,
-    paddingTop: 5,
-  },
-  serviceText: {
-    color: "#d13f3f",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  serviceDescription: {
-    color: "#555",
-    fontSize: 12,
-    textAlign: "center",
+    paddingHorizontal: 8,
     marginTop: 5,
-    paddingHorizontal: 5,
   },
 
+  // Individual service card
+  serviceCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    marginBottom: 22,
+    overflow: "hidden",
+    elevation: 2,
+    borderWidth: 0.5,
+    borderColor: "#E8E8E8",
+  },
+
+  serviceCardDisabled: {
+    opacity: 0.9,
+  },
+
+  // Image container - REMOVED OVERLAY
+  serviceImageContainer: {
+    height: 140,
+    position: "relative",
+  },
+
+  serviceImage: {
+    width: "100%",
+    height: "100%",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+  },
+
+  // Content area - BETTER SPACING
+  serviceContent: {
+    paddingHorizontal: 15,
+    paddingVertical: 16,
+    minHeight: 110,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Service title (name) - ENHANCED
+  serviceTitle: {
+    color: "#d13f3f",
+    fontSize: 16,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 10,
+    lineHeight: 20,
+    letterSpacing: 0.3,
+  },
+
+  // Service description - MUCH BETTER READABILITY
+  serviceDescription: {
+    color: "#555",
+    fontSize: 12.5,
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 4,
+    fontWeight: "400",
+    opacity: 0.95,
+    letterSpacing: 0.2,
+  },
   // UPDATED: Testimonials section with new styles for backend integration
   testimonialsSection: {
     marginTop: 20,
