@@ -120,7 +120,7 @@ const hairColorStyles = {
     "Cherry Red",
     "Honey Blonde",
     "Ombre",
-    "Caramel Highlight",
+    "Toasted Caramel",
     "Chunky",
   ],
   Balayage: [
@@ -130,7 +130,7 @@ const hairColorStyles = {
     "Bronde",
     "Chocolate Brown",
     "Silver",
-    "Caramel Balayage",
+    "Golden Caramel",
   ],
 };
 
