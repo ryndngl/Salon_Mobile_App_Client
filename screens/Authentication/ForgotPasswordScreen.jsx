@@ -24,6 +24,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [showTokenEntry, setShowTokenEntry] = useState(false);
   const [manualToken, setManualToken] = useState('');
+  const [validatingToken, setValidatingToken] = useState(false); // NEW: Token validation loading
 
   const [emailSentVisible, setEmailSentVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
@@ -88,29 +89,89 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      if (result.success) {
+      console.log('=== FORGOT PASSWORD DEBUG ===');
+      console.log('HTTP Status:', response.status);
+      console.log('Response Text:', responseText);
+      console.log('Parsed Result:', result);
+      console.log('result.success:', result.success);
+      console.log('result.message:', result.message);
+      console.log('============================');
+
+      if (result.success === true || result.isSuccess === true) {
+        console.log('SUCCESS: Showing email sent modal');
         setEmailSentVisible(true);
+        
         setTimeout(() => {
+          console.log('TIMEOUT: Hiding modal and showing token entry');
           setEmailSentVisible(false);
           setShowTokenEntry(true);
         }, 3000);
       } else {
+        console.log('FAILED: Showing error alert');
         Alert.alert('Error', result.message || 'Failed to send reset email');
       }
     } catch (error) {
+      console.log('NETWORK ERROR:', error);
       Alert.alert('Error', 'Network error. Check your connection and server.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualTokenSubmit = () => {
+  // NEW: Token validation function
+  const validateTokenBeforeNavigate = async (token) => {
+    try {
+      setValidatingToken(true);
+      
+      const response = await fetch('http://192.168.100.6:5000/api/auth/validate-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          token: token.trim(),
+          type: 'mobile'
+        }),
+      });
+
+      const result = await response.json();
+      
+      console.log('=== TOKEN VALIDATION DEBUG ===');
+      console.log('Token being validated:', token.trim());
+      console.log('Validation result:', result);
+      console.log('===============================');
+
+      if (result.success === true || result.isSuccess === true) {
+        console.log('✅ Token validation successful, navigating to ResetPasswordScreen');
+        return true;
+      } else {
+        console.log('❌ Token validation failed:', result.message);
+        Alert.alert('Invalid Token', result.message || 'The token you entered is invalid or has already been used.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Token validation error:', error);
+      Alert.alert('Error', 'Unable to validate token. Please check your connection.');
+      return false;
+    } finally {
+      setValidatingToken(false);
+    }
+  };
+
+  const handleManualTokenSubmit = async () => {
     if (!manualToken.trim()) {
       Alert.alert('Error', 'Please enter the token from your email');
       return;
     }
 
-    navigation.navigate('ResetPasswordScreen', { token: manualToken.trim() });
+    // NEW: Validate token before navigating
+    const isValidToken = await validateTokenBeforeNavigate(manualToken.trim());
+    
+    if (isValidToken) {
+      console.log('Navigating to ResetPasswordScreen with validated token:', manualToken.trim());
+      navigation.navigate('ResetPasswordScreen', { token: manualToken.trim() });
+    }
+    // If validation fails, user stays on this screen
   };
 
   if (showTokenEntry) {
@@ -129,6 +190,7 @@ export default function ForgotPasswordScreen() {
               <TouchableOpacity
                 style={styles.tokenBackButton}
                 onPress={() => setShowTokenEntry(false)}
+                disabled={validatingToken} // Disable during validation
               >
                 <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
               </TouchableOpacity>
@@ -151,6 +213,7 @@ export default function ForgotPasswordScreen() {
                   multiline={true}
                   numberOfLines={3}
                   autoFocus={true}
+                  editable={!validatingToken} // Disable during validation
                 />
                 <View style={styles.tokenButtonRow}>
                   <TouchableOpacity
@@ -159,24 +222,30 @@ export default function ForgotPasswordScreen() {
                       setShowTokenEntry(false);
                       setManualToken('');
                     }}
+                    disabled={validatingToken} // Disable during validation
                   >
                     <Text style={styles.cancelTokenButtonText}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
                       styles.submitTokenButton,
-                      !manualToken.trim() && styles.submitTokenButtonDisabled
+                      (!manualToken.trim() || validatingToken) && styles.submitTokenButtonDisabled
                     ]}
                     onPress={handleManualTokenSubmit}
-                    disabled={!manualToken.trim()}
+                    disabled={!manualToken.trim() || validatingToken}
                   >
-                    <Text style={styles.submitTokenButtonText}>Continue</Text>
+                    {validatingToken ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.submitTokenButtonText}>Continue</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
 
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
+                disabled={validatingToken} // Disable during validation
               >
                 <Text style={styles.tokenBackToLoginText}>
                   Remember your password?{' '}

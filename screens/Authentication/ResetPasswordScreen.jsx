@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { CommonActions } from '@react-navigation/native'; // Import CommonActions
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 export default function ResetPasswordScreen() {
@@ -82,18 +83,45 @@ export default function ResetPasswordScreen() {
       );
       const result = await response.json();
 
-      if (result.success) {
+      console.log('=== RESET PASSWORD DEBUG ===');
+      console.log('Response:', result);
+      console.log('Success field:', result.success);
+      console.log('isSuccess field:', result.isSuccess);
+      console.log('============================');
+
+      // Check for success using both possible success fields
+      if (result.success === true || result.isSuccess === true) {
+        console.log('SUCCESS: Password reset successful');
+        
+        // Clear form data for security
+        setNewPassword("");
+        setConfirmPassword("");
+        
+        // Show success modal
         setResetSuccessVisible(true);
-        setTimeout(() => {
+        
+        // Enhanced navigation - Reset stack and prevent going back
+       setTimeout(() => {
           setResetSuccessVisible(false);
-          navigation.navigate("LoginScreen");
-        }, 3000);
+          
+          // Use CommonActions.reset to completely reset navigation stack
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [
+                { name: 'LoginScreen' },
+              ],
+            })
+          );
+        }, 3000); 
+
       } else {
+        console.log('FAILED: Password reset failed');
         Alert.alert("Error", result.message || "Failed to reset password");
       }
     } catch (error) {
-      Alert.alert("Error", "Something went wrong. Please try again.");
       console.error("Reset password error:", error);
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -127,6 +155,8 @@ export default function ResetPasswordScreen() {
             value={newPassword}
             onChangeText={setNewPassword}
             editable={!loading}
+            autoComplete="new-password"
+            textContentType="newPassword"
           />
 
           <TextInput
@@ -137,12 +167,17 @@ export default function ResetPasswordScreen() {
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             editable={!loading}
+            autoComplete="new-password"
+            textContentType="newPassword"
           />
 
           <TouchableOpacity
-            style={styles.button}
+            style={[
+              styles.button,
+              (!newPassword || !confirmPassword || loading) && styles.buttonDisabled
+            ]}
             onPress={handleResetPassword}
-            disabled={loading}
+            disabled={!newPassword || !confirmPassword || loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -176,6 +211,9 @@ export default function ResetPasswordScreen() {
             <Text style={styles.successSubText}>
               You can now log in with your new password.
             </Text>
+            <Text style={styles.successRedirectText}>
+              Redirecting to login...
+            </Text>
           </Animated.View>
         </View>
       </Modal>
@@ -186,7 +224,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff", // White background
+    backgroundColor: "#fff",
   },
   scrollContainer: {
     flexGrow: 1,
@@ -201,7 +239,6 @@ const styles = StyleSheet.create({
     borderColor: "#D4D4D4",
     borderWidth: 1,
     padding: 30,
-    borderColor: "#D4D4D4",
     elevation: 1.5,
     alignItems: "center",
     position: "relative",
@@ -247,8 +284,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 25,
-    borderColor: "#1565C0",
     elevation: 1,
+  },
+  buttonDisabled: {
+    backgroundColor: "#cccccc",
   },
   buttonText: {
     color: "#fff",
@@ -298,5 +337,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
     lineHeight: 22,
+  },
+  successRedirectText: {
+    fontSize: 13,
+    color: "#bbb",
+    marginTop: 12,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });
