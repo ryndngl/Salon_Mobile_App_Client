@@ -76,18 +76,18 @@ const haircutStyles = {
     "Side swept",
   ],
   Kids: [
-    "Army Cut",
-    "Bowl Cut",
-    "Buzz Cut",
-    "Comb Over Cut",
-    "Pompadour",
-    "Fade",
-    "Fringe Fade",
-    "High Fade",
-    "Mid Fade",
-    "Mohawk",
-    "Side Part Cut",
-  ],
+  "Little Army Cut",  
+  "Bowl Cut", 
+  "Little Buzz",      
+  "Comb Over Cut",
+  "Pompadour",
+  "Little Fade",      
+  "Fringe Fade",
+  "High Fade",
+  "Mid Fade",
+  "Mohawk",
+  "Side Part Cut",
+],
 };
 
 const hairColorOptions = [
@@ -159,6 +159,12 @@ const BookingFormScreen = () => {
   const comingFromCTA = passedServiceName === "";
 
   useEffect(() => {
+  console.log('=== DEBUG INFO ===');
+  console.log('passedStyle:', passedStyle);
+  console.log('isHairCut:', isHairCut);
+  console.log('Kids array:', haircutStyles.Kids);
+  console.log('Includes check:', haircutStyles.Kids.includes(passedStyle));
+
     if (isHairCut && passedStyle) {
       for (const cat of Object.keys(haircutStyles)) {
         if (haircutStyles[cat].includes(passedStyle)) {

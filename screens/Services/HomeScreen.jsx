@@ -1,4 +1,4 @@
-// HomeScreen.jsx - Updated with testimonial backend integration
+// HomeScreen.jsx - Complete fixed version with search functionality
 import { useState, useEffect } from "react";
 import {
   View,
@@ -73,38 +73,40 @@ const HomeScreen = () => {
       setError('Failed to load services. Please check your connection.');
       
       // Fallback to local data if API fails
-      const fallbackServices = [
-        {
-          _id: "1",
-          name: "Hair Cut",
-          styles: [],
-        },
-        {
-          _id: "2", 
-          name: "Hair Color",
-          styles: [],
-        },
-        {
-          _id: "3", 
-          name: "Hair Treatment",
-          styles: [],
-        },
-        {
-          _id: "4", 
-          name: "Rebond & Forms",
-          styles: [],
-        },
-        {
-          _id: "5", 
-          name: "Nail Care",
-          styles: [],
-        },
-        {
-          _id: "6", 
-          name: "Foot Spa",
-          styles: [],
-        },
-      ];
+      const fallbackServices = {
+        services: [
+          {
+            _id: "1",
+            name: "Hair Cut",
+            styles: [],
+          },
+          {
+            _id: "2", 
+            name: "Hair Color",
+            styles: [],
+          },
+          {
+            _id: "3", 
+            name: "Hair Treatment",
+            styles: [],
+          },
+          {
+            _id: "4", 
+            name: "Rebond & Forms",
+            styles: [],
+          },
+          {
+            _id: "5", 
+            name: "Nail Care",
+            styles: [],
+          },
+          {
+            _id: "6", 
+            name: "Foot Spa",
+            styles: [],
+          },
+        ]
+      };
       setServicesData(fallbackServices);
     } finally {
       setLoading(false);
@@ -222,6 +224,7 @@ const HomeScreen = () => {
     }
   };
 
+  // FIXED: Search function with proper endpoint and fallback handling
   const searchStyles = async (query) => {
     if (!query.trim()) {
       setFilteredStyles([]);
@@ -229,51 +232,47 @@ const HomeScreen = () => {
     }
 
     try {
+      // FIXED: Correct endpoint URL
       const response = await fetch(
-        `${API_BASE_URL}/search/styles?query=${encodeURIComponent(query)}`
+        `${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(query)}`
       );
 
       if (response.ok) {
-        const data = await response.json();
-        const dataWithIds = data.map((item, index) => ({
+        const apiResponse = await response.json();
+        // FIXED: Extract results from API response structure
+        const results = apiResponse.data?.results || [];
+        const dataWithIds = results.map((item, index) => ({
           ...item,
           searchId: `${item.serviceName || 'unknown'}-${item.name || item._id || index}`,
         }));
         setFilteredStyles(dataWithIds);
       } else {
         console.warn("Search endpoint failed, falling back locally");
-
-        // fallback local search
-        const results = servicesData.flatMap((service) =>
-          (service.styles || [])
-            .filter((style) =>
-              style.name?.toLowerCase().includes(query.toLowerCase())
-            )
-            .map((style) => ({
-              ...style,
-              serviceName: service.name,
-              searchId: `${service.name}-${style.name || style._id || Math.random()}`,
-            }))
-        );
-        setFilteredStyles(results);
+        performLocalSearch(query);
       }
     } catch (error) {
       console.error("Error searching styles:", error);
-
-      // fallback local again
-      const results = servicesData.flatMap((service) =>
-        (service.styles || [])
-          .filter((style) =>
-            style.name?.toLowerCase().includes(query.toLowerCase())
-          )
-          .map((style) => ({
-            ...style,
-            serviceName: service.name,
-            searchId: `${service.name}-${style.name || style._id || Math.random()}`,
-          }))
-      );
-      setFilteredStyles(results);
+      performLocalSearch(query);
     }
+  };
+
+  // FIXED: Local search fallback with proper array handling
+  const performLocalSearch = (query) => {
+    // FIXED: Handle different API response structures
+    const servicesList = servicesData.services || servicesData.data || servicesData || [];
+    
+    const results = servicesList.flatMap((service) =>
+      (service.styles || [])
+        .filter((style) =>
+          style.name?.toLowerCase().includes(query.toLowerCase())
+        )
+        .map((style) => ({
+          ...style,
+          serviceName: service.name,
+          searchId: `${service.name}-${style.name || style._id || Math.random()}`,
+        }))
+    );
+    setFilteredStyles(results);
   };
 
   // Effects
@@ -281,7 +280,7 @@ const HomeScreen = () => {
     const loadUserData = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
-        const storedToken = await AsyncStorage.getItem("token"); // Assuming you store token separately
+        const storedToken = await AsyncStorage.getItem("token");
         
         if (storedUser && storedToken) {
           const userObj = JSON.parse(storedUser);
@@ -299,7 +298,7 @@ const HomeScreen = () => {
 
     loadUserData();
     fetchServices();
-    fetchTestimonials(); // Fetch public testimonials
+    fetchTestimonials();
   }, [navigation]);
 
   // Fetch user testimonials when token is available
@@ -361,53 +360,49 @@ const HomeScreen = () => {
     },
   ];
 
-  // FIXED handleServicePress function sa HomeScreen mo
-const handleServicePress = async (serviceName) => {
-  try {
-    setLoading(true);
-    
-    const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  // FIXED: handleServicePress function
+  const handleServicePress = async (serviceName) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const apiResponse = await response.json();
+      console.log("API Response:", apiResponse);
+      
+      const selectedService = apiResponse.data || apiResponse;
+      console.log("Extracted Service:", selectedService);
+      
+      if (selectedService && selectedService.name) {
+        navigation.navigate("ServiceDetailScreen", { service: selectedService });
+      } else {
+        Alert.alert("Service Not Found", "This service is not available yet.");
+      }
+      
+    } catch (error) {
+      console.error('Error fetching service:', error);
+      Alert.alert("Error", "Failed to load service details. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    
-    const apiResponse = await response.json();
-    console.log("API Response:", apiResponse); // Debug log
-    
-    // FIXED: Extract the actual service data from the API response
-    const selectedService = apiResponse.data || apiResponse;
-    console.log("Extracted Service:", selectedService); // Debug log
-    
-    if (selectedService && selectedService.name) {
-      // Pass the extracted service data, not the whole API response
-      navigation.navigate("ServiceDetailScreen", { service: selectedService });
-    } else {
-      Alert.alert("Service Not Found", "This service is not available yet.");
-    }
-    
-  } catch (error) {
-    console.error('Error fetching service:', error);
-    Alert.alert("Error", "Failed to load service details. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Image source handler for API images
   const getImageSource = (imageData) => {
     if (typeof imageData === 'number') {
-      return imageData; // Local require() image
+      return imageData;
     }
     
     if (typeof imageData === 'string') {
       if (imageData.startsWith('/images/') || imageData.startsWith('images/')) {
-        // API image path - construct full URL
         return { uri: `${API_BASE_URL.replace('/api', '')}/uploads/${imageData.replace('/images/', '').replace('images/', '')}` };
       }
       
       if (imageData.startsWith('http')) {
-        // Full URL
         return { uri: imageData };
       }
     }
@@ -434,7 +429,6 @@ const handleServicePress = async (serviceName) => {
       setNewTestimonial({ name: "", feedback: "", rating: 5 });
       setShowTestimonialModal(false);
       
-      // Refresh testimonials
       fetchTestimonials();
       fetchUserTestimonials();
       
@@ -463,7 +457,6 @@ const handleServicePress = async (serviceName) => {
     if (result.success) {
       resetTestimonialModal();
       
-      // Refresh testimonials
       fetchTestimonials();
       fetchUserTestimonials();
       
@@ -486,7 +479,6 @@ const handleServicePress = async (serviceName) => {
             const result = await deleteTestimonial(testimonialId);
             
             if (result.success) {
-              // Refresh testimonials
               fetchTestimonials();
               fetchUserTestimonials();
               
@@ -527,7 +519,6 @@ const handleServicePress = async (serviceName) => {
           <Text style={styles.testimonialDate}>
             {new Date(item.createdAt).toLocaleDateString()}
           </Text>
-          {/* Rating display */}
           <View style={styles.ratingContainer}>
             {[...Array(5)].map((_, i) => (
               <Icon
@@ -611,7 +602,6 @@ const handleServicePress = async (serviceName) => {
             {newTestimonial.feedback.length}/200 characters
           </Text>
 
-          {/* Rating selector */}
           <Text style={styles.inputLabel}>Rating</Text>
           <View style={styles.ratingSelector}>
             {[1, 2, 3, 4, 5].map((rating) => (
@@ -685,40 +675,39 @@ const handleServicePress = async (serviceName) => {
         </Text>
       </View>
 
-<Text style={styles.servicesTitle}>Our Services</Text>
-<View style={styles.servicesContainer}>
-  {displayServices.map((service, index) => (
-    <TouchableOpacity
-      key={index}
-      style={[
-        styles.serviceCard,
-        loading && styles.serviceCardDisabled
-      ]}
-      onPress={() => handleServicePress(service.name)}
-      activeOpacity={0.8}
-      disabled={loading}
-    >
-      <View style={styles.serviceImageContainer}>
-        <Image
-          source={{ uri: service.image }}
-          style={styles.serviceImage}
-          resizeMode="cover"
-        />
+      <Text style={styles.servicesTitle}>Our Services</Text>
+      <View style={styles.servicesContainer}>
+        {displayServices.map((service, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.serviceCard,
+              loading && styles.serviceCardDisabled
+            ]}
+            onPress={() => handleServicePress(service.name)}
+            activeOpacity={0.8}
+            disabled={loading}
+          >
+            <View style={styles.serviceImageContainer}>
+              <Image
+                source={{ uri: service.image }}
+                style={styles.serviceImage}
+                resizeMode="cover"
+              />
+            </View>
+            
+            <View style={styles.serviceContent}>
+              <Text style={styles.serviceTitle} numberOfLines={2}>
+                {service.name}
+              </Text>
+              <Text style={styles.serviceDescription} numberOfLines={3}>
+                {service.description}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </View>
-      
-      <View style={styles.serviceContent}>
-        <Text style={styles.serviceTitle} numberOfLines={2}>
-          {service.name}
-        </Text>
-        <Text style={styles.serviceDescription} numberOfLines={3}>
-          {service.description}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ))}
-</View>
 
-      {/* UPDATED: Testimonials Section with backend integration */}
       <View style={styles.testimonialsSection}>
         <View style={styles.testimonialTitleContainer}>
           <Text style={styles.testimonialTitle}>What Our Clients Say</Text>
@@ -732,7 +721,6 @@ const handleServicePress = async (serviceName) => {
           </TouchableOpacity>
         </View>
 
-        {/* User's own testimonials first */}
         {userTestimonials.length > 0 && (
           <View style={styles.userTestimonialsSection}>
             <Text style={styles.sectionSubtitle}>Your Reviews</Text>
@@ -742,7 +730,6 @@ const handleServicePress = async (serviceName) => {
           </View>
         )}
 
-        {/* All testimonials */}
         {testimonials.length > 0 ? (
           <View style={styles.allTestimonialsSection}>
             <Text style={styles.sectionSubtitle}>
@@ -767,7 +754,6 @@ const handleServicePress = async (serviceName) => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      {/* Search Bar */}
       <View
         style={{
           paddingHorizontal: 16,
@@ -805,7 +791,6 @@ const handleServicePress = async (serviceName) => {
         </View>
       </View>
 
-      {/* Main Content */}
       {searchQuery.trim() === "" ? (
         renderNonSearchContent()
       ) : (
@@ -830,7 +815,7 @@ const handleServicePress = async (serviceName) => {
      <BigServiceCard
        serviceName={item.serviceName}
        styleData={item}  
-       onImagePress={() => openImageModal(item.image)}  
+       onImagePress={() => openImageModal(item.imageUrl || item.image)}  
        onBookPress={() =>
          navigation.navigate("BookingFormScreen", {
            serviceName: item.serviceName,
@@ -857,10 +842,8 @@ const handleServicePress = async (serviceName) => {
         />
       )}
 
-      {/* Testimonial Modal */}
       {renderTestimonialModal()}
 
-      {/* Image Modal */}
       <Modal
         visible={modalVisible}
         transparent={true}
@@ -889,14 +872,11 @@ const handleServicePress = async (serviceName) => {
 };
 
 const styles = StyleSheet.create({
-  // Main container with padding for the entire screen
   scrollContainer: {
     paddingHorizontal: 16,
     paddingBottom: 130,
     paddingTop: 27,
   },
-
-  // Styles for the search bar and its icons
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -923,8 +903,6 @@ const styles = StyleSheet.create({
     color: "#000",
     paddingVertical: 10,
   },
-
-  // Header or top section of the screen
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -962,8 +940,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#fff",
   },
-
-  // Banner with a colored background and centered text
   banner: {
     backgroundColor: "#d13f3f",
     height: 160,
@@ -978,9 +954,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "500",
   },
-
-  // Section for the list of services
-servicesTitle: {
+  servicesTitle: {
     fontSize: 28,
     fontWeight: "800",
     textAlign: "center",
@@ -993,8 +967,6 @@ servicesTitle: {
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-
-  // Container
   servicesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1002,8 +974,6 @@ servicesTitle: {
     paddingHorizontal: 8,
     marginTop: 5,
   },
-
-  // Individual service card
   serviceCard: {
     width: "48%",
     backgroundColor: "#fff",
@@ -1014,25 +984,19 @@ servicesTitle: {
     borderWidth: 0.5,
     borderColor: "#E8E8E8",
   },
-
   serviceCardDisabled: {
     opacity: 0.9,
   },
-
-  // Image container - REMOVED OVERLAY
   serviceImageContainer: {
     height: 140,
     position: "relative",
   },
-
   serviceImage: {
     width: "100%",
     height: "100%",
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
   },
-
-  // Content area - BETTER SPACING
   serviceContent: {
     paddingHorizontal: 15,
     paddingVertical: 16,
@@ -1040,8 +1004,6 @@ servicesTitle: {
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // Service title (name) - ENHANCED
   serviceTitle: {
     color: "#d13f3f",
     fontSize: 16,
@@ -1051,8 +1013,6 @@ servicesTitle: {
     lineHeight: 20,
     letterSpacing: 0.3,
   },
-
-  // Service description - MUCH BETTER READABILITY
   serviceDescription: {
     color: "#555",
     fontSize: 12.5,
@@ -1063,7 +1023,6 @@ servicesTitle: {
     opacity: 0.95,
     letterSpacing: 0.2,
   },
-  // UPDATED: Testimonials section with new styles for backend integration
   testimonialsSection: {
     marginTop: 20,
   },
@@ -1096,8 +1055,6 @@ servicesTitle: {
     fontWeight: "600",
     marginLeft: 4,
   },
-
-  // NEW: Section separators
   userTestimonialsSection: {
     marginBottom: 20,
   },
@@ -1111,7 +1068,6 @@ servicesTitle: {
     marginBottom: 10,
     paddingLeft: 5,
   },
-
   testimonialCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -1154,13 +1110,10 @@ servicesTitle: {
     lineHeight: 20,
     marginTop: 8,
   },
-
-  // NEW: Rating display
   ratingContainer: {
     flexDirection: "row",
     marginTop: 4,
   },
-
   userBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1177,8 +1130,6 @@ servicesTitle: {
     fontWeight: "500",
     marginLeft: 4,
   },
-
-  // Modal (popup) for adding or editing testimonials
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -1225,8 +1176,6 @@ servicesTitle: {
     color: "#888",
     marginTop: 4,
   },
-
-  // NEW: Rating selector
   ratingSelector: {
     flexDirection: "row",
     justifyContent: "center",
@@ -1236,7 +1185,6 @@ servicesTitle: {
   starButton: {
     paddingHorizontal: 5,
   },
-
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1268,8 +1216,6 @@ servicesTitle: {
     fontSize: 16,
     fontWeight: "600",
   },
-
-  // Empty state for testimonials
   emptyTestimonials: {
     alignItems: "center",
     paddingVertical: 40,
@@ -1282,8 +1228,6 @@ servicesTitle: {
     marginTop: 12,
     lineHeight: 22,
   },
-
-  // NEW: Loading state
   loadingContainer: {
     alignItems: "center",
     paddingVertical: 20,
