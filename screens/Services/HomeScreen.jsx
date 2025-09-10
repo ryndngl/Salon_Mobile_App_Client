@@ -32,6 +32,7 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
   const [displayName, setDisplayName] = useState("");
+  const [showOptionsMenu, setShowOptionsMenu] = useState(null); 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [servicesData, setServicesData] = useState([]);
@@ -89,40 +90,54 @@ const HomeScreen = () => {
     }
   };
 
-  const fetchTestimonials = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/testimonials`);
+const fetchTestimonials = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/testimonials`);
+    
+    if (response.ok) {
+      const result = await response.json();
+      const allTestimonials = result.data || [];
       
-      if (response.ok) {
-        const result = await response.json();
-        const allTestimonials = result.data || [];
-        
-        if (userObj && userObj.id) {
-          const currentUserId = userObj.id.toString().trim();
-          
-          const userTestimonials = allTestimonials.filter(t => {
-            if (!t.userId) return false;
-            const testimonialUserId = t.userId.toString().trim();
-            return testimonialUserId === currentUserId;
-          });
-          
-          const otherTestimonials = allTestimonials.filter(t => {
-            if (!t.userId) return true;
-            const testimonialUserId = t.userId.toString().trim();
-            return testimonialUserId !== currentUserId;
-          });
-          
-          setUserTestimonials(userTestimonials);
-          setTestimonials(otherTestimonials);
-        } else {
-          setTestimonials(allTestimonials);
-          setUserTestimonials([]);
-        }
+      // Get current user data from AsyncStorage to ensure we have the latest
+      const storedUser = await AsyncStorage.getItem("user");
+      let currentUser = userObj;
+      
+      if (storedUser) {
+        currentUser = JSON.parse(storedUser);
       }
-    } catch (error) {
-      // Silent fail for testimonials
+      
+      if (currentUser && (currentUser.id || currentUser._id)) {
+        const currentUserId = (currentUser.id || currentUser._id).toString().trim();
+        
+        const userTestimonials = allTestimonials.filter(t => {
+          if (!t.userId) return false;
+          const testimonialUserId = t.userId.toString().trim();
+          return testimonialUserId === currentUserId;
+        });
+        
+        const otherTestimonials = allTestimonials.filter(t => {
+          if (!t.userId) return true; // Non-authenticated testimonials go to others
+          const testimonialUserId = t.userId.toString().trim();
+          return testimonialUserId !== currentUserId;
+        });
+        
+        console.log('Current User ID:', currentUserId);
+        console.log('User Testimonials:', userTestimonials.length);
+        console.log('Other Testimonials:', otherTestimonials.length);
+        
+        setUserTestimonials(userTestimonials);
+        setTestimonials(otherTestimonials);
+      } else {
+        // If no user is logged in, show all as customer testimonials
+        setTestimonials(allTestimonials);
+        setUserTestimonials([]);
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error fetching testimonials:', error);
+    // Silent fail for testimonials
+  }
+};
 
   const createTestimonial = async (testimonialData) => {
     try {
@@ -213,6 +228,7 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
     return { success: false, message: 'Network error occurred' };
   }
 };
+
   const searchStyles = async (query) => {
     if (!query.trim()) {
       setFilteredStyles([]);
@@ -257,37 +273,40 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
     setFilteredStyles(results);
   };
 
-  // Optimized initialization
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        const storedUser = await AsyncStorage.getItem("user");
-        const storedToken = await AsyncStorage.getItem("token");
+ 
+// Replace the existing useEffect for initialization
+useEffect(() => {
+  const initializeApp = async () => {
+    try {
+      const storedUser = await AsyncStorage.getItem("user");
+      const storedToken = await AsyncStorage.getItem("token");
+      
+      if (storedUser && storedToken) {
+        const userData = JSON.parse(storedUser);
+        setUserObj(userData);
+        const userName = userData.fullName || userData.name || userData.displayName;
+        setDisplayName(userName || "User");
+        setUserToken(storedToken);
         
-        if (storedUser && storedToken) {
-          const userData = JSON.parse(storedUser);
-          setUserObj(userData);
-          const userName = userData.fullName || userData.name || userData.displayName;
-          setDisplayName(userName || "User");
-          setUserToken(storedToken);
-          
-          // Load services and testimonials in parallel
-          await Promise.all([
-            fetchServices(),
-            fetchTestimonials()
-          ]);
-        } else {
-          navigation.replace('LoginScreen');
-        }
-      } catch (error) {
+        // Load services first, then testimonials
+        await fetchServices();
+        // Wait a bit to ensure userObj is set before fetching testimonials
+        setTimeout(async () => {
+          await fetchTestimonials();
+        }, 100);
+      } else {
         navigation.replace('LoginScreen');
-      } finally {
-        setIsInitialLoad(false);
       }
-    };
+    } catch (error) {
+      console.error('Initialization error:', error);
+      navigation.replace('LoginScreen');
+    } finally {
+      setIsInitialLoad(false);
+    }
+  };
 
-    initializeApp();
-  }, [navigation]);
+  initializeApp();
+}, [navigation]);
 
   useEffect(() => {
     if (userObj && !isInitialLoad) {
@@ -302,6 +321,18 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
 
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, servicesData]);
+
+useEffect(() => {
+  const handleTouchOutside = () => {
+    if (showOptionsMenu) {
+      setShowOptionsMenu(null);
+    }
+  };
+
+  return () => {
+    setShowOptionsMenu(null);
+  };
+}, [showOptionsMenu]);
 
   const openImageModal = (image) => {
     setSelectedImage(image);
@@ -495,59 +526,76 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
     setEditingId(null);
   };
 
-  const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
-    return (
-      <View key={item._id || index} style={[
-        styles.testimonialCard,
-        isUserTestimonial && styles.userTestimonialCard
-      ]}>
-        <View style={styles.testimonialHeader}>
-          <View style={styles.testimonialUserInfo}>
-            <Text style={styles.testimonialName}>{item.name}</Text>
-            <Text style={styles.testimonialDate}>
-              {new Date(item.createdAt).toLocaleDateString()}
-            </Text>
+const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
+  return (
+    <View key={item._id || index} style={[
+      styles.testimonialCard,
+      isUserTestimonial && styles.userTestimonialCard
+    ]}>
+      <View style={styles.testimonialHeader}>
+        <View style={styles.testimonialUserInfo}>
+          <Text style={styles.testimonialName}>{item.name}</Text>
+          <View style={styles.ratingAndDate}>
             <View style={styles.ratingContainer}>
               {[...Array(5)].map((_, i) => (
                 <Icon
                   key={i}
                   name={i < (item.rating || 5) ? "star" : "star-outline"}
                   size={16}
-                  color="#ffcc00"
+                  color="#ffb000"
+                  style={{ marginRight: 2 }}
                 />
               ))}
             </View>
+            <Text style={styles.testimonialDate}>
+              {new Date(item.createdAt).toLocaleDateString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: '2-digit'
+              })}
+            </Text>
           </View>
+        </View>
 
-          {isUserTestimonial && (
-            <View style={styles.testimonialActions}>
+        {isUserTestimonial && (
+          <TouchableOpacity
+            onPress={() => setShowOptionsMenu(showOptionsMenu === item._id ? null : item._id)}
+            style={styles.optionsButton}
+          >
+            <Icon name="ellipsis-vertical" size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <Text style={styles.testimonialMessage}>{item.feedback}</Text>
+
+      {isUserTestimonial && (
+        <>
+          <TouchableOpacity
+            onPress={() => openEditModal(item)}
+            style={styles.editReviewButton}
+          >
+            <Text style={styles.editReviewText}>Edit your review</Text>
+          </TouchableOpacity>
+
+          {showOptionsMenu === item._id && (
+            <View style={styles.optionsMenu}>
               <TouchableOpacity
-                onPress={() => openEditModal(item)}
-                style={styles.actionButton}
+                onPress={() => {
+                  setShowOptionsMenu(null);
+                  handleDeleteTestimonial(item._id);
+                }}
+                style={styles.deleteOption}
               >
-                <Icon name="pencil" size={20} color="#007d3f" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDeleteTestimonial(item._id)}
-                style={styles.actionButton}
-              >
-                <Icon name="trash" size={20} color="#d13f3f" />
+                <Text style={styles.deleteOptionText}>Delete</Text>
               </TouchableOpacity>
             </View>
           )}
-        </View>
-
-        <Text style={styles.testimonialMessage}>{item.feedback}</Text>
-
-        {isUserTestimonial && (
-          <View style={styles.userBadge}>
-            <Icon name="person" size={14} color="#007d3f" />
-            <Text style={styles.userBadgeText}>Your Review</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
+        </>
+      )}
+    </View>
+  );
+};
 
   const renderTestimonialModal = () => (
     <Modal
@@ -632,6 +680,47 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
     </Modal>
   );
 
+  const renderTestimonialsSection = () => (
+    <View style={styles.testimonialsSection}>
+      <View style={styles.testimonialTitleContainer}>
+        <Text style={styles.testimonialTitle}>What Our Clients Say</Text>
+        <TouchableOpacity
+          style={styles.addTestimonialButton}
+          onPress={() => setShowTestimonialModal(true)}
+          disabled={testimonialLoading}
+        >
+          <Icon name="chatbubble-ellipses" size={20} color="#fff" />
+          <Text style={styles.addTestimonialText}>Add Review</Text>
+        </TouchableOpacity>
+      </View>
+
+      {userTestimonials.length > 0 && (
+        <View style={styles.userTestimonialsSection}>
+          <Text style={styles.sectionSubtitle}>Your Reviews</Text>
+          {userTestimonials.map((item, index) => 
+            renderTestimonialCard(item, index, true)
+          )}
+        </View>
+      )}
+
+      {testimonials.length > 0 ? (
+        <View style={styles.allTestimonialsSection}>
+          <Text style={styles.sectionSubtitle}>
+            {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
+          </Text>
+          {testimonials.map((item, index) => renderTestimonialCard(item, index, false))}
+        </View>
+      ) : (
+        <View style={styles.emptyTestimonials}>
+          <Icon name="chatbubbles-outline" size={48} color="#ccc" />
+          <Text style={styles.emptyTestimonialsText}>
+            No reviews yet. Be the first to share your experience!
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
   const renderNonSearchContent = () => (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.headerContainer}>
@@ -697,44 +786,7 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
         ))}
       </View>
 
-      <View style={styles.testimonialsSection}>
-        <View style={styles.testimonialTitleContainer}>
-          <Text style={styles.testimonialTitle}>What Our Clients Say</Text>
-          <TouchableOpacity
-            style={styles.addTestimonialButton}
-            onPress={() => setShowTestimonialModal(true)}
-            disabled={testimonialLoading}
-          >
-            <Icon name="add-circle" size={24} color="#007d3f" />
-            <Text style={styles.addTestimonialText}>Add Review</Text>
-          </TouchableOpacity>
-        </View>
-
-        {userTestimonials.length > 0 && (
-          <View style={styles.userTestimonialsSection}>
-            <Text style={styles.sectionSubtitle}>Your Reviews</Text>
-            {userTestimonials.map((item, index) => 
-              renderTestimonialCard(item, index, true)
-            )}
-          </View>
-        )}
-
-        {testimonials.length > 0 ? (
-          <View style={styles.allTestimonialsSection}>
-            <Text style={styles.sectionSubtitle}>
-              {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
-            </Text>
-            {testimonials.map((item, index) => renderTestimonialCard(item, index, false))}
-          </View>
-        ) : (
-          <View style={styles.emptyTestimonials}>
-            <Icon name="chatbubbles-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyTestimonialsText}>
-              No reviews yet. Be the first to share your experience!
-            </Text>
-          </View>
-        )}
-      </View>
+      {renderTestimonialsSection()}
     </ScrollView>
   );
 
@@ -1009,64 +1061,74 @@ const styles = StyleSheet.create({
     opacity: 0.95,
     letterSpacing: 0.2,
   },
+  
+  // Testimonial Section Styles
   testimonialsSection: {
-    marginTop: 20,
+    marginTop: 30,
+    paddingHorizontal: 4,
   },
   testimonialTitleContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 20,
+    paddingHorizontal: 4,
   },
   testimonialTitle: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 24,
+    fontWeight: "800",
     color: "#d13f3f",
-    marginBottom: 12,
-    textAlign: "center",
+    letterSpacing: 0.5,
   },
   addTestimonialButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f9f4",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#007d3f",
+    backgroundColor: "#007d3f",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: "#007d3f",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   addTestimonialText: {
-    color: "#007d3f",
-    fontSize: 12,
-    fontWeight: "600",
-    marginLeft: 4,
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginLeft: 6,
+    letterSpacing: 0.3,
   },
   userTestimonialsSection: {
-    marginBottom: 20,
+    marginBottom: 25,
   },
   allTestimonialsSection: {
-    marginTop: 10,
+    marginTop: 5,
   },
   sectionSubtitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#666",
-    marginBottom: 10,
-    paddingLeft: 5,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#333",
+    marginBottom: 15,
+    paddingLeft: 8,
+    letterSpacing: 0.3,
   },
+
+  // Updated Testimonial Card Styles
   testimonialCard: {
     backgroundColor: "#fff",
-    borderRadius: 14,
-    borderColor: "#D4D4D4",
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
+    borderColor: "#E8E8E8",
+    elevation: 2,
+    shadowColor: "#000",
   },
-  // ADDED: Special styling for user's own testimonial cards
   userTestimonialCard: {
-    backgroundColor: "#f0f9f4",
-    borderColor: "#007d3f",
-    borderWidth: 1.5,
+    backgroundColor: "#fff",
+    borderColor: "#E8E8E8",
   },
   testimonialHeader: {
     flexDirection: "row",
@@ -1077,63 +1139,68 @@ const styles = StyleSheet.create({
   testimonialUserInfo: {
     flex: 1,
   },
-  testimonialDate: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 2,
-  },
-  testimonialActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionButton: {
-    padding: 4,
-  },
   testimonialName: {
     fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 5,
+    fontWeight: "600",
     color: "#333",
+    marginBottom: 4,
   },
-  testimonialMessage: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 20,
-    marginTop: 8,
+  ratingAndDate: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   ratingContainer: {
     flexDirection: "row",
+  },
+  testimonialDate: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "400",
+  },
+  optionsButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  testimonialMessage: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  editReviewButton: {
+    alignSelf: "flex-start",
     marginTop: 4,
   },
-  userBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: "#e8f5e8",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  userBadgeText: {
-    fontSize: 10,
-    color: "#007d3f",
+  editReviewText: {
+    fontSize: 14,
+    color: "#1976D2",
     fontWeight: "500",
-    marginLeft: 4,
   },
-  // ADDED: Debug info styles (hidden by default)
-  debugInfo: {
-    backgroundColor: "#f0f0f0",
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 5,
-    display: 'none', // Hidden by default
+  optionsMenu: {
+    position: "absolute",
+    top: 40,
+    right: 12,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: "#000",
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    zIndex: 10,
   },
-  debugText: {
-    fontSize: 10,
-    color: "#666",
-    fontStyle: 'italic',
+  deleteOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  deleteOptionText: {
+    fontSize: 14,
+    color: "#d32f2f",
+    fontWeight: "500",
+  },
+
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
