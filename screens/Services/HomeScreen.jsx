@@ -39,6 +39,7 @@ const HomeScreen = () => {
   const [error, setError] = useState(null);
   const [userToken, setUserToken] = useState(null);
   const [userObj, setUserObj] = useState(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Testimonial states
   const [testimonials, setTestimonials] = useState([]);
@@ -69,7 +70,6 @@ const HomeScreen = () => {
       setServicesData(data);
       
     } catch (error) {
-      console.error('Error fetching services:', error);
       setError('Failed to load services. Please check your connection.');
       
       // Fallback to local data if API fails
@@ -89,7 +89,6 @@ const HomeScreen = () => {
     }
   };
 
-  // Fixed fetchTestimonials to separate user testimonials
   const fetchTestimonials = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials`);
@@ -98,26 +97,20 @@ const HomeScreen = () => {
         const result = await response.json();
         const allTestimonials = result.data || [];
         
-        console.log('All testimonials:', allTestimonials);
-        console.log('Current user:', userObj);
-        
-        // Separate user's testimonials from others
         if (userObj && userObj.id) {
+          const currentUserId = userObj.id.toString().trim();
+          
           const userTestimonials = allTestimonials.filter(t => {
-            const testimonialUserId = t.userId?.toString();
-            const currentUserId = userObj.id?.toString();
-            console.log(`Comparing: ${testimonialUserId} === ${currentUserId}`);
+            if (!t.userId) return false;
+            const testimonialUserId = t.userId.toString().trim();
             return testimonialUserId === currentUserId;
           });
           
           const otherTestimonials = allTestimonials.filter(t => {
-            const testimonialUserId = t.userId?.toString();
-            const currentUserId = userObj.id?.toString();
-            return !t.userId || testimonialUserId !== currentUserId;
+            if (!t.userId) return true;
+            const testimonialUserId = t.userId.toString().trim();
+            return testimonialUserId !== currentUserId;
           });
-          
-          console.log('User testimonials:', userTestimonials);
-          console.log('Other testimonials:', otherTestimonials);
           
           setUserTestimonials(userTestimonials);
           setTestimonials(otherTestimonials);
@@ -125,15 +118,12 @@ const HomeScreen = () => {
           setTestimonials(allTestimonials);
           setUserTestimonials([]);
         }
-      } else {
-        console.warn('Failed to fetch testimonials');
       }
     } catch (error) {
-      console.error('Error fetching testimonials:', error);
+      // Silent fail for testimonials
     }
   };
 
-  // Fixed createTestimonial function
   const createTestimonial = async (testimonialData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials`, {
@@ -152,59 +142,77 @@ const HomeScreen = () => {
         return { success: false, message: result.message };
       }
     } catch (error) {
-      console.error('Error creating testimonial:', error);
       return { success: false, message: 'Network error occurred' };
     }
   };
 
   // Fixed updateTestimonial function
-  const updateTestimonial = async (testimonialId, testimonialData) => {
+const updateTestimonial = async (testimonialId, testimonialData) => {
+  try {
+    // IMPORTANT: Remove any undefined or invalid fields
+    const cleanData = {
+      name: testimonialData.name,
+      feedback: testimonialData.feedback,
+      rating: testimonialData.rating || 5
+    };
+
+    const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(cleanData), 
+    });
+    
+    const responseText = await response.text(); 
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testimonialData),
-      });
-      
-      const result = await response.json();
+      const result = JSON.parse(responseText); 
       
       if (response.ok) {
         return { success: true, data: result.data };
       } else {
         return { success: false, message: result.message };
       }
-    } catch (error) {
-      console.error('Error updating testimonial:', error);
-      return { success: false, message: 'Network error occurred' };
+    } catch (parseError) {
+      return { success: false, message: 'Invalid response from server' };
     }
-  };
+  } catch (error) {
+    return { success: false, message: 'Network error occurred' };
+  }
+};
 
-  // Fixed deleteTestimonial function
   const deleteTestimonial = async (testimonialId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const responseText = await response.text();
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      const result = await response.json();
+      const result = responseText ? JSON.parse(responseText) : {};
       
       if (response.ok) {
         return { success: true };
       } else {
-        return { success: false, message: result.message };
+        return { success: false, message: result.message || 'Failed to delete' };
       }
-    } catch (error) {
-      console.error('Error deleting testimonial:', error);
-      return { success: false, message: 'Network error occurred' };
+    } catch (parseError) {
+      // If delete was successful but returned empty response
+      if (response.ok) {
+        return { success: true };
+      }
+      return { success: false, message: 'Invalid response from server' };
     }
-  };
-
-  // Search function with proper endpoint and fallback handling
+  } catch (error) {
+    console.error('Error deleting testimonial:', error);
+    return { success: false, message: 'Network error occurred' };
+  }
+};
   const searchStyles = async (query) => {
     if (!query.trim()) {
       setFilteredStyles([]);
@@ -225,16 +233,13 @@ const HomeScreen = () => {
         }));
         setFilteredStyles(dataWithIds);
       } else {
-        console.warn("Search endpoint failed, falling back locally");
         performLocalSearch(query);
       }
     } catch (error) {
-      console.error("Error searching styles:", error);
       performLocalSearch(query);
     }
   };
 
-  // Local search fallback with proper array handling
   const performLocalSearch = (query) => {
     const servicesList = servicesData.services || servicesData.data || servicesData || [];
     
@@ -252,35 +257,40 @@ const HomeScreen = () => {
     setFilteredStyles(results);
   };
 
-  // Effects
+  // Optimized initialization
   useEffect(() => {
-    const loadUserData = async () => {
+    const initializeApp = async () => {
       try {
         const storedUser = await AsyncStorage.getItem("user");
         const storedToken = await AsyncStorage.getItem("token");
         
         if (storedUser && storedToken) {
           const userData = JSON.parse(storedUser);
-          console.log('Loaded user data:', userData);
           setUserObj(userData);
           const userName = userData.fullName || userData.name || userData.displayName;
           setDisplayName(userName || "User");
           setUserToken(storedToken);
+          
+          // Load services and testimonials in parallel
+          await Promise.all([
+            fetchServices(),
+            fetchTestimonials()
+          ]);
         } else {
           navigation.replace('LoginScreen');
         }
       } catch (error) {
-        console.error("Failed to load user data:", error);
         navigation.replace('LoginScreen');
+      } finally {
+        setIsInitialLoad(false);
       }
     };
 
-    loadUserData();
-    fetchServices();
+    initializeApp();
   }, [navigation]);
 
   useEffect(() => {
-    if (userObj) {
+    if (userObj && !isInitialLoad) {
       fetchTestimonials();
     }
   }, [userObj]);
@@ -293,7 +303,6 @@ const HomeScreen = () => {
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, servicesData]);
 
-  // Helper functions
   const openImageModal = (image) => {
     setSelectedImage(image);
     setModalVisible(true);
@@ -337,7 +346,6 @@ const HomeScreen = () => {
     },
   ];
 
-  // handleServicePress function
   const handleServicePress = async (serviceName) => {
     try {
       setLoading(true);
@@ -358,21 +366,18 @@ const HomeScreen = () => {
       }
       
     } catch (error) {
-      console.error('Error fetching service:', error);
       Alert.alert("Error", "Failed to load service details. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Fixed handleAddTestimonial with prevention logic and user data
   const handleAddTestimonial = async () => {
     if (!newTestimonial.name.trim() || !newTestimonial.feedback.trim()) {
       Alert.alert("Error", "Please fill in both name and feedback fields.");
       return;
     }
 
-    // Prevention logic - check if user already has a testimonial
     const existingUserTestimonial = [...testimonials, ...userTestimonials].find(t => 
       t.userId && userObj && t.userId.toString() === userObj.id?.toString()
     );
@@ -397,14 +402,10 @@ const HomeScreen = () => {
     const testimonialData = {
       name: newTestimonial.name.trim(),
       feedback: newTestimonial.feedback.trim(),
-      rating: newTestimonial.rating || 5
+      rating: newTestimonial.rating || 5,
+      userId: userObj?.id || userObj?._id,
+      userEmail: userObj?.email
     };
-
-    // Add user data if available
-    if (userObj && userObj.id) {
-      testimonialData.userId = userObj.id;
-      testimonialData.userEmail = userObj.email;
-    }
 
     const result = await createTestimonial(testimonialData);
 
@@ -494,10 +495,7 @@ const HomeScreen = () => {
     setEditingId(null);
   };
 
-  // FIXED: Render functions with improved styling and visibility
   const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
-    console.log('Rendering testimonial card:', { item, isUserTestimonial });
-    
     return (
       <View key={item._id || index} style={[
         styles.testimonialCard,
@@ -710,16 +708,6 @@ const HomeScreen = () => {
             <Icon name="add-circle" size={24} color="#007d3f" />
             <Text style={styles.addTestimonialText}>Add Review</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* DEBUG INFO */}
-        <View style={styles.debugInfo}>
-          <Text style={styles.debugText}>
-            User testimonials: {userTestimonials.length} | Other testimonials: {testimonials.length}
-          </Text>
-          <Text style={styles.debugText}>
-            User ID: {userObj?.id || 'No user ID'}
-          </Text>
         </View>
 
         {userTestimonials.length > 0 && (
@@ -1073,7 +1061,12 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: "#ddd",
+  },
+  // ADDED: Special styling for user's own testimonial cards
+  userTestimonialCard: {
+    backgroundColor: "#f0f9f4",
+    borderColor: "#007d3f",
+    borderWidth: 1.5,
   },
   testimonialHeader: {
     flexDirection: "row",
@@ -1127,6 +1120,19 @@ const styles = StyleSheet.create({
     color: "#007d3f",
     fontWeight: "500",
     marginLeft: 4,
+  },
+  // ADDED: Debug info styles (hidden by default)
+  debugInfo: {
+    backgroundColor: "#f0f0f0",
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 5,
+    display: 'none', // Hidden by default
+  },
+  debugText: {
+    fontSize: 10,
+    color: "#666",
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,

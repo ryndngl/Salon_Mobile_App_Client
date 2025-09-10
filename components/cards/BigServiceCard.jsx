@@ -75,7 +75,6 @@ const BigServiceCard = ({
     try {
       await toggleFavorite(serviceObj, styleObj);
     } catch (error) {
-      console.error("Error toggling favorite:", error);
     }
   };
 
@@ -89,14 +88,6 @@ const BigServiceCard = ({
     ? extractImages(styleData)
     : [];
   const hasMultipleImages = imagesArray.length > 1;
-
-  // DEBUG logs
-  console.log("BigServiceCard - styleData received:", styleData);
-  console.log(
-    "BigServiceCard - styleData keys:",
-    styleData ? Object.keys(styleData) : "styleData is null/undefined"
-  );
-  console.log("BigServiceCard - imagesArray after extractImages:", imagesArray);
 
   // Foot Spa multi-image layout
   if (isFootSpaService && hasMultipleImages) {
