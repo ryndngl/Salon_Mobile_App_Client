@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { useAuth } from "../../context/AuthContext";
 
+
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { login, setUser, setIsAuthenticated } = useAuth();
@@ -60,9 +61,13 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
+      
+      // REMOVED the API_URL console.log since login is handled in AuthContext
+      console.log('Login attempt for:', email);
 
       const result = await login(email, password);
-
+      console.log('Login result:', result);
+         
       if (result.success) {
         setLoginSuccessVisible(true);
 
@@ -78,7 +83,7 @@ export default function LoginScreen() {
           });
         }, 1000);
       } else {
-        Alert.alert("Login Failed", result.message);
+        Alert.alert("Login Failed", result.message || "Invalid credentials");
       }
     } catch (error) {
       Alert.alert("Error", "Something went wrong. Please try again.");

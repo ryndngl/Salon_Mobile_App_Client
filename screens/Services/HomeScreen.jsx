@@ -1,4 +1,3 @@
-// HomeScreen.jsx - Complete fixed version with search functionality
 import { useState, useEffect } from "react";
 import {
   View,
@@ -20,10 +19,10 @@ import { useNavigation } from "@react-navigation/native";
 import BigServiceCard from "../../components/cards/BigServiceCard";
 import { useFavorites } from "../../context/FavoritesContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import API_URL from "../../config/api";
 
 const screenWidth = Dimensions.get("window").width;
-
-const API_BASE_URL = 'http://192.168.100.6:5000/api'; 
+const API_BASE_URL = API_URL.replace('/api', '') + '/api';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -39,8 +38,9 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userToken, setUserToken] = useState(null);
+  const [userObj, setUserObj] = useState(null);
 
-  // Testimonial states - Updated for backend integration
+  // Testimonial states
   const [testimonials, setTestimonials] = useState([]);
   const [userTestimonials, setUserTestimonials] = useState([]);
   const [showTestimonialModal, setShowTestimonialModal] = useState(false);
@@ -75,36 +75,12 @@ const HomeScreen = () => {
       // Fallback to local data if API fails
       const fallbackServices = {
         services: [
-          {
-            _id: "1",
-            name: "Hair Cut",
-            styles: [],
-          },
-          {
-            _id: "2", 
-            name: "Hair Color",
-            styles: [],
-          },
-          {
-            _id: "3", 
-            name: "Hair Treatment",
-            styles: [],
-          },
-          {
-            _id: "4", 
-            name: "Rebond & Forms",
-            styles: [],
-          },
-          {
-            _id: "5", 
-            name: "Nail Care",
-            styles: [],
-          },
-          {
-            _id: "6", 
-            name: "Foot Spa",
-            styles: [],
-          },
+          { _id: "1", name: "Hair Cut", styles: [] },
+          { _id: "2", name: "Hair Color", styles: [] },
+          { _id: "3", name: "Hair Treatment", styles: [] },
+          { _id: "4", name: "Rebond & Forms", styles: [] },
+          { _id: "5", name: "Nail Care", styles: [] },
+          { _id: "6", name: "Foot Spa", styles: [] },
         ]
       };
       setServicesData(fallbackServices);
@@ -113,14 +89,42 @@ const HomeScreen = () => {
     }
   };
 
-  // NEW: Fetch all testimonials (public)
+  // Fixed fetchTestimonials to separate user testimonials
   const fetchTestimonials = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials`);
       
       if (response.ok) {
         const result = await response.json();
-        setTestimonials(result.data || []);
+        const allTestimonials = result.data || [];
+        
+        console.log('All testimonials:', allTestimonials);
+        console.log('Current user:', userObj);
+        
+        // Separate user's testimonials from others
+        if (userObj && userObj.id) {
+          const userTestimonials = allTestimonials.filter(t => {
+            const testimonialUserId = t.userId?.toString();
+            const currentUserId = userObj.id?.toString();
+            console.log(`Comparing: ${testimonialUserId} === ${currentUserId}`);
+            return testimonialUserId === currentUserId;
+          });
+          
+          const otherTestimonials = allTestimonials.filter(t => {
+            const testimonialUserId = t.userId?.toString();
+            const currentUserId = userObj.id?.toString();
+            return !t.userId || testimonialUserId !== currentUserId;
+          });
+          
+          console.log('User testimonials:', userTestimonials);
+          console.log('Other testimonials:', otherTestimonials);
+          
+          setUserTestimonials(userTestimonials);
+          setTestimonials(otherTestimonials);
+        } else {
+          setTestimonials(allTestimonials);
+          setUserTestimonials([]);
+        }
       } else {
         console.warn('Failed to fetch testimonials');
       }
@@ -129,34 +133,12 @@ const HomeScreen = () => {
     }
   };
 
-  // NEW: Fetch user's own testimonials
-  const fetchUserTestimonials = async () => {
-    if (!userToken) return;
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/testimonials/my-testimonials`, {
-        headers: {
-          'Authorization': `Bearer ${userToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        setUserTestimonials(result.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching user testimonials:', error);
-    }
-  };
-
-  // NEW: Create testimonial
+  // Fixed createTestimonial function
   const createTestimonial = async (testimonialData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(testimonialData),
@@ -175,13 +157,12 @@ const HomeScreen = () => {
     }
   };
 
-  // NEW: Update testimonial
+  // Fixed updateTestimonial function
   const updateTestimonial = async (testimonialId, testimonialData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(testimonialData),
@@ -200,13 +181,12 @@ const HomeScreen = () => {
     }
   };
 
-  // NEW: Delete testimonial
+  // Fixed deleteTestimonial function
   const deleteTestimonial = async (testimonialId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${userToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -224,7 +204,7 @@ const HomeScreen = () => {
     }
   };
 
-  // FIXED: Search function with proper endpoint and fallback handling
+  // Search function with proper endpoint and fallback handling
   const searchStyles = async (query) => {
     if (!query.trim()) {
       setFilteredStyles([]);
@@ -232,14 +212,12 @@ const HomeScreen = () => {
     }
 
     try {
-      // FIXED: Correct endpoint URL
       const response = await fetch(
         `${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(query)}`
       );
 
       if (response.ok) {
         const apiResponse = await response.json();
-        // FIXED: Extract results from API response structure
         const results = apiResponse.data?.results || [];
         const dataWithIds = results.map((item, index) => ({
           ...item,
@@ -256,9 +234,8 @@ const HomeScreen = () => {
     }
   };
 
-  // FIXED: Local search fallback with proper array handling
+  // Local search fallback with proper array handling
   const performLocalSearch = (query) => {
-    // FIXED: Handle different API response structures
     const servicesList = servicesData.services || servicesData.data || servicesData || [];
     
     const results = servicesList.flatMap((service) =>
@@ -283,8 +260,10 @@ const HomeScreen = () => {
         const storedToken = await AsyncStorage.getItem("token");
         
         if (storedUser && storedToken) {
-          const userObj = JSON.parse(storedUser);
-          const userName = userObj.fullName || userObj.name || userObj.displayName;
+          const userData = JSON.parse(storedUser);
+          console.log('Loaded user data:', userData);
+          setUserObj(userData);
+          const userName = userData.fullName || userData.name || userData.displayName;
           setDisplayName(userName || "User");
           setUserToken(storedToken);
         } else {
@@ -298,15 +277,13 @@ const HomeScreen = () => {
 
     loadUserData();
     fetchServices();
-    fetchTestimonials();
   }, [navigation]);
 
-  // Fetch user testimonials when token is available
   useEffect(() => {
-    if (userToken) {
-      fetchUserTestimonials();
+    if (userObj) {
+      fetchTestimonials();
     }
-  }, [userToken]);
+  }, [userObj]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -360,7 +337,7 @@ const HomeScreen = () => {
     },
   ];
 
-  // FIXED: handleServicePress function
+  // handleServicePress function
   const handleServicePress = async (serviceName) => {
     try {
       setLoading(true);
@@ -372,10 +349,7 @@ const HomeScreen = () => {
       }
       
       const apiResponse = await response.json();
-      console.log("API Response:", apiResponse);
-      
       const selectedService = apiResponse.data || apiResponse;
-      console.log("Extracted Service:", selectedService);
       
       if (selectedService && selectedService.name) {
         navigation.navigate("ServiceDetailScreen", { service: selectedService });
@@ -391,47 +365,55 @@ const HomeScreen = () => {
     }
   };
 
-  // Image source handler for API images
-  const getImageSource = (imageData) => {
-    if (typeof imageData === 'number') {
-      return imageData;
-    }
-    
-    if (typeof imageData === 'string') {
-      if (imageData.startsWith('/images/') || imageData.startsWith('images/')) {
-        return { uri: `${API_BASE_URL.replace('/api', '')}/uploads/${imageData.replace('/images/', '').replace('images/', '')}` };
-      }
-      
-      if (imageData.startsWith('http')) {
-        return { uri: imageData };
-      }
-    }
-  };
-
-  // UPDATED: Testimonial functions with backend integration
+  // Fixed handleAddTestimonial with prevention logic and user data
   const handleAddTestimonial = async () => {
     if (!newTestimonial.name.trim() || !newTestimonial.feedback.trim()) {
       Alert.alert("Error", "Please fill in both name and feedback fields.");
       return;
     }
 
+    // Prevention logic - check if user already has a testimonial
+    const existingUserTestimonial = [...testimonials, ...userTestimonials].find(t => 
+      t.userId && userObj && t.userId.toString() === userObj.id?.toString()
+    );
+
+    if (existingUserTestimonial) {
+      Alert.alert(
+        "Review Already Exists", 
+        "You already have a testimonial. You can edit your existing review instead.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Edit Existing", 
+            onPress: () => openEditModal(existingUserTestimonial)
+          }
+        ]
+      );
+      return;
+    }
+
     setTestimonialLoading(true);
 
-    const result = await createTestimonial({
+    const testimonialData = {
       name: newTestimonial.name.trim(),
       feedback: newTestimonial.feedback.trim(),
       rating: newTestimonial.rating || 5
-    });
+    };
+
+    // Add user data if available
+    if (userObj && userObj.id) {
+      testimonialData.userId = userObj.id;
+      testimonialData.userEmail = userObj.email;
+    }
+
+    const result = await createTestimonial(testimonialData);
 
     setTestimonialLoading(false);
 
     if (result.success) {
       setNewTestimonial({ name: "", feedback: "", rating: 5 });
       setShowTestimonialModal(false);
-      
       fetchTestimonials();
-      fetchUserTestimonials();
-      
       Alert.alert("Success", "Your testimonial has been added!");
     } else {
       Alert.alert("Error", result.message || "Failed to add testimonial");
@@ -446,20 +428,24 @@ const HomeScreen = () => {
 
     setTestimonialLoading(true);
 
-    const result = await updateTestimonial(editingId, {
+    const testimonialData = {
       name: newTestimonial.name.trim(),
       feedback: newTestimonial.feedback.trim(),
       rating: newTestimonial.rating || 5
-    });
+    };
+
+    if (userObj && userObj.id) {
+      testimonialData.userId = userObj.id;
+      testimonialData.userEmail = userObj.email;
+    }
+
+    const result = await updateTestimonial(editingId, testimonialData);
 
     setTestimonialLoading(false);
 
     if (result.success) {
       resetTestimonialModal();
-      
       fetchTestimonials();
-      fetchUserTestimonials();
-      
       Alert.alert("Success", "Testimonial updated successfully!");
     } else {
       Alert.alert("Error", result.message || "Failed to update testimonial");
@@ -480,8 +466,6 @@ const HomeScreen = () => {
             
             if (result.success) {
               fetchTestimonials();
-              fetchUserTestimonials();
-              
               Alert.alert("Success", "Testimonial deleted successfully!");
             } else {
               Alert.alert("Error", result.message || "Failed to delete testimonial");
@@ -510,55 +494,62 @@ const HomeScreen = () => {
     setEditingId(null);
   };
 
-  // UPDATED: Render functions with backend data
-  const renderTestimonialCard = (item, index, isUserTestimonial = false) => (
-    <View key={item._id || index} style={styles.testimonialCard}>
-      <View style={styles.testimonialHeader}>
-        <View style={styles.testimonialUserInfo}>
-          <Text style={styles.testimonialName}>{item.name}</Text>
-          <Text style={styles.testimonialDate}>
-            {new Date(item.createdAt).toLocaleDateString()}
-          </Text>
-          <View style={styles.ratingContainer}>
-            {[...Array(5)].map((_, i) => (
-              <Icon
-                key={i}
-                name={i < (item.rating || 5) ? "star" : "star-outline"}
-                size={16}
-                color="#ffcc00"
-              />
-            ))}
+  // FIXED: Render functions with improved styling and visibility
+  const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
+    console.log('Rendering testimonial card:', { item, isUserTestimonial });
+    
+    return (
+      <View key={item._id || index} style={[
+        styles.testimonialCard,
+        isUserTestimonial && styles.userTestimonialCard
+      ]}>
+        <View style={styles.testimonialHeader}>
+          <View style={styles.testimonialUserInfo}>
+            <Text style={styles.testimonialName}>{item.name}</Text>
+            <Text style={styles.testimonialDate}>
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
+            <View style={styles.ratingContainer}>
+              {[...Array(5)].map((_, i) => (
+                <Icon
+                  key={i}
+                  name={i < (item.rating || 5) ? "star" : "star-outline"}
+                  size={16}
+                  color="#ffcc00"
+                />
+              ))}
+            </View>
           </View>
+
+          {isUserTestimonial && (
+            <View style={styles.testimonialActions}>
+              <TouchableOpacity
+                onPress={() => openEditModal(item)}
+                style={styles.actionButton}
+              >
+                <Icon name="pencil" size={20} color="#007d3f" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteTestimonial(item._id)}
+                style={styles.actionButton}
+              >
+                <Icon name="trash" size={20} color="#d13f3f" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
+        <Text style={styles.testimonialMessage}>{item.feedback}</Text>
+
         {isUserTestimonial && (
-          <View style={styles.testimonialActions}>
-            <TouchableOpacity
-              onPress={() => openEditModal(item)}
-              style={styles.actionButton}
-            >
-              <Icon name="pencil" size={18} color="#007d3f" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDeleteTestimonial(item._id)}
-              style={styles.actionButton}
-            >
-              <Icon name="trash" size={18} color="#d13f3f" />
-            </TouchableOpacity>
+          <View style={styles.userBadge}>
+            <Icon name="person" size={14} color="#007d3f" />
+            <Text style={styles.userBadgeText}>Your Review</Text>
           </View>
         )}
       </View>
-
-      <Text style={styles.testimonialMessage}>{item.feedback}</Text>
-
-      {isUserTestimonial && (
-        <View style={styles.userBadge}>
-          <Icon name="person" size={12} color="#007d3f" />
-          <Text style={styles.userBadgeText}>Your Review</Text>
-        </View>
-      )}
-    </View>
-  );
+    );
+  };
 
   const renderTestimonialModal = () => (
     <Modal
@@ -721,6 +712,16 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* DEBUG INFO */}
+        <View style={styles.debugInfo}>
+          <Text style={styles.debugText}>
+            User testimonials: {userTestimonials.length} | Other testimonials: {testimonials.length}
+          </Text>
+          <Text style={styles.debugText}>
+            User ID: {userObj?.id || 'No user ID'}
+          </Text>
+        </View>
+
         {userTestimonials.length > 0 && (
           <View style={styles.userTestimonialsSection}>
             <Text style={styles.sectionSubtitle}>Your Reviews</Text>
@@ -735,10 +736,7 @@ const HomeScreen = () => {
             <Text style={styles.sectionSubtitle}>
               {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
             </Text>
-            {testimonials
-              .filter(testimonial => !userTestimonials.some(ut => ut._id === testimonial._id))
-              .map((item, index) => renderTestimonialCard(item, index, false))
-            }
+            {testimonials.map((item, index) => renderTestimonialCard(item, index, false))}
           </View>
         ) : (
           <View style={styles.emptyTestimonials}>
@@ -811,23 +809,23 @@ const HomeScreen = () => {
            const isFootSpa = item.serviceName
              .toLowerCase()
              .includes("foot spa");
-   return (
-     <BigServiceCard
-       serviceName={item.serviceName}
-       styleData={item}  
-       onImagePress={() => openImageModal(item.imageUrl || item.image)}  
-       onBookPress={() =>
-         navigation.navigate("BookingFormScreen", {
-           serviceName: item.serviceName,
-           styleName: item.name,
-           stylePrice: item.price,
-         })
-       }
-       isFootSpa={isFootSpa}
-       searchCard={true}
-     />
-   );
- }}
+           return (
+             <BigServiceCard
+               serviceName={item.serviceName}
+               styleData={item}  
+               onImagePress={() => openImageModal(item.imageUrl || item.image)}  
+               onBookPress={() =>
+                 navigation.navigate("BookingFormScreen", {
+                   serviceName: item.serviceName,
+                   styleName: item.name,
+                   stylePrice: item.price,
+                 })
+               }
+               isFootSpa={isFootSpa}
+               searchCard={true}
+             />
+           );
+         }}
           ListEmptyComponent={
             loading ? (
               <View style={styles.loadingContainer}>

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
+const API_URL = 'http://192.168.100.67:5000';
 
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
@@ -22,6 +23,7 @@ export default function RegisterScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -46,7 +48,7 @@ export default function RegisterScreen({ navigation }) {
 
     try {
       setLoading(true);
-      const response = await fetch("http://192.168.100.6:5000/api/auth/sign-up", {
+      const response = await fetch(`${API_URL}/api/auth/sign-up`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

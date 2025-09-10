@@ -17,6 +17,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+const API_URL = 'http://192.168.100.67:5000';
+
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
 
@@ -24,7 +26,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [showTokenEntry, setShowTokenEntry] = useState(false);
   const [manualToken, setManualToken] = useState('');
-  const [validatingToken, setValidatingToken] = useState(false); // NEW: Token validation loading
+  const [validatingToken, setValidatingToken] = useState(false);
 
   const [emailSentVisible, setEmailSentVisible] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
@@ -52,78 +54,117 @@ export default function ForgotPasswordScreen() {
   }, [emailSentVisible]);
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+  if (!email) {
+    Alert.alert('Error', 'Please enter your email address');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    Alert.alert('Error', 'Please enter a valid email address');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    console.log('=== SENDING REQUEST ===');
+    console.log('URL:', `${API_URL}/api/auth/forgot-password`);
+    console.log('Email:', email);
+
+    const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    console.log('=== RESPONSE RECEIVED ===');
+    console.log('Status:', response.status);
+    console.log('Status Text:', response.statusText);
+    console.log('Headers:', response.headers);
+    console.log('Content-Type:', response.headers.get('content-type'));
+
+    const responseText = await response.text();
+    console.log('=== RAW RESPONSE ===');
+    console.log('Raw Response Text:', responseText);
+    console.log('Response Length:', responseText.length);
+
+    if (!responseText) {
+      console.log('❌ Empty response from server');
+      Alert.alert('Error', 'Empty response from server');
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    // Check if response looks like JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.log('❌ Server returned non-JSON response');
+      console.log('Content-Type:', contentType);
+      console.log('Response preview:', responseText.substring(0, 200));
+      Alert.alert('Error', `Server returned ${contentType || 'unknown'} instead of JSON. Check server logs.`);
       return;
     }
 
+    let result;
     try {
-      setLoading(true);
-
-      const response = await fetch('http://192.168.100.6:5000/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const responseText = await response.text();
-
-      if (!responseText) {
-        Alert.alert('Error', 'Empty response from server');
-        return;
-      }
-
-      let result;
-      try {
-        result = JSON.parse(responseText);
-      } catch (parseError) {
-        Alert.alert('Error', 'Server returned invalid response');
-        return;
-      }
-
-      console.log('=== FORGOT PASSWORD DEBUG ===');
-      console.log('HTTP Status:', response.status);
-      console.log('Response Text:', responseText);
-      console.log('Parsed Result:', result);
-      console.log('result.success:', result.success);
-      console.log('result.message:', result.message);
-      console.log('============================');
-
-      if (result.success === true || result.isSuccess === true) {
-        console.log('SUCCESS: Showing email sent modal');
-        setEmailSentVisible(true);
-        
-        setTimeout(() => {
-          console.log('TIMEOUT: Hiding modal and showing token entry');
-          setEmailSentVisible(false);
-          setShowTokenEntry(true);
-        }, 3000);
-      } else {
-        console.log('FAILED: Showing error alert');
-        Alert.alert('Error', result.message || 'Failed to send reset email');
-      }
-    } catch (error) {
-      console.log('NETWORK ERROR:', error);
-      Alert.alert('Error', 'Network error. Check your connection and server.');
-    } finally {
-      setLoading(false);
+      result = JSON.parse(responseText);
+      console.log('✅ Successfully parsed JSON:', result);
+    } catch (parseError) {
+      console.log('❌ JSON Parse Error:', parseError);
+      console.log('Trying to parse:', responseText.substring(0, 100));
+      Alert.alert('Error', 'Server returned invalid JSON. Check server configuration.');
+      return;
     }
-  };
 
-  // NEW: Token validation function
+    console.log('=== FORGOT PASSWORD DEBUG ===');
+    console.log('HTTP Status:', response.status);
+    console.log('Parsed Result:', result);
+    console.log('result.success:', result.success);
+    console.log('result.message:', result.message);
+    console.log('============================');
+
+    // Check HTTP status first
+    if (!response.ok) {
+      console.log('❌ HTTP Error Status:', response.status);
+      Alert.alert('Error', result.message || `Server error: ${response.status}`);
+      return;
+    }
+
+    if (result.success === true || result.isSuccess === true) {
+      console.log('✅ SUCCESS: Showing email sent modal');
+      setEmailSentVisible(true);
+      
+      setTimeout(() => {
+        console.log('⏰ TIMEOUT: Hiding modal and showing token entry');
+        setEmailSentVisible(false);
+        setShowTokenEntry(true);
+      }, 3000);
+    } else {
+      console.log('❌ FAILED: Showing error alert');
+      Alert.alert('Error', result.message || 'Failed to send reset email');
+    }
+  } catch (error) {
+    console.log('❌ NETWORK ERROR:', error);
+    console.log('Error name:', error.name);
+    console.log('Error message:', error.message);
+    console.log('Error stack:', error.stack);
+    
+    if (error.name === 'TypeError' && error.message.includes('Network request failed')) {
+      Alert.alert('Connection Error', 'Cannot connect to server. Please check:\n• Server is running\n• Correct IP address\n• Network connection');
+    } else {
+      Alert.alert('Error', `Network error: ${error.message}`);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
   const validateTokenBeforeNavigate = async (token) => {
     try {
       setValidatingToken(true);
       
-      const response = await fetch('http://192.168.100.6:5000/api/auth/validate-token', {
+      const response = await fetch(`${API_URL}/api/auth/validate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,14 +205,12 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // NEW: Validate token before navigating
     const isValidToken = await validateTokenBeforeNavigate(manualToken.trim());
     
     if (isValidToken) {
       console.log('Navigating to ResetPasswordScreen with validated token:', manualToken.trim());
       navigation.navigate('ResetPasswordScreen', { token: manualToken.trim() });
     }
-    // If validation fails, user stays on this screen
   };
 
   if (showTokenEntry) {
@@ -190,7 +229,7 @@ export default function ForgotPasswordScreen() {
               <TouchableOpacity
                 style={styles.tokenBackButton}
                 onPress={() => setShowTokenEntry(false)}
-                disabled={validatingToken} // Disable during validation
+                disabled={validatingToken}
               >
                 <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
               </TouchableOpacity>
@@ -213,7 +252,7 @@ export default function ForgotPasswordScreen() {
                   multiline={true}
                   numberOfLines={3}
                   autoFocus={true}
-                  editable={!validatingToken} // Disable during validation
+                  editable={!validatingToken}
                 />
                 <View style={styles.tokenButtonRow}>
                   <TouchableOpacity
@@ -222,7 +261,7 @@ export default function ForgotPasswordScreen() {
                       setShowTokenEntry(false);
                       setManualToken('');
                     }}
-                    disabled={validatingToken} // Disable during validation
+                    disabled={validatingToken}
                   >
                     <Text style={styles.cancelTokenButtonText}>Cancel</Text>
                   </TouchableOpacity>
@@ -245,7 +284,7 @@ export default function ForgotPasswordScreen() {
 
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
-                disabled={validatingToken} // Disable during validation
+                disabled={validatingToken}
               >
                 <Text style={styles.tokenBackToLoginText}>
                   Remember your password?{' '}
@@ -363,10 +402,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     backgroundColor: '#fff',
     borderRadius: 20,
-     borderColor: "#D4D4D4",
+    borderColor: "#D4D4D4",
     borderWidth: 1,
     padding: 30,
-    borderColor: '#D4D4D4',
     elevation: 1.5,
     alignItems: 'center',
     position: 'relative',

@@ -15,8 +15,10 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { CommonActions } from '@react-navigation/native'; // Import CommonActions
+import { CommonActions } from '@react-navigation/native';
 import Ionicons from "react-native-vector-icons/Ionicons";
+
+const API_URL = 'http://192.168.100.67:5000';
 
 export default function ResetPasswordScreen() {
   const navigation = useNavigation();
@@ -71,16 +73,13 @@ export default function ResetPasswordScreen() {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        "http://192.168.100.6:5000/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token, newPassword }),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token, newPassword }),
+      });
       const result = await response.json();
 
       console.log('=== RESET PASSWORD DEBUG ===');
@@ -89,22 +88,17 @@ export default function ResetPasswordScreen() {
       console.log('isSuccess field:', result.isSuccess);
       console.log('============================');
 
-      // Check for success using both possible success fields
       if (result.success === true || result.isSuccess === true) {
         console.log('SUCCESS: Password reset successful');
         
-        // Clear form data for security
         setNewPassword("");
         setConfirmPassword("");
         
-        // Show success modal
         setResetSuccessVisible(true);
         
-        // Enhanced navigation - Reset stack and prevent going back
-       setTimeout(() => {
+        setTimeout(() => {
           setResetSuccessVisible(false);
           
-          // Use CommonActions.reset to completely reset navigation stack
           navigation.dispatch(
             CommonActions.reset({
               index: 0,

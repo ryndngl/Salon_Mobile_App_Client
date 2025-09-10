@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FavoritesMigrationHelper } from '../utils/FavoritesMigrationHelper';
+const API_URL = 'http://192.168.100.67:5000';
 
 const AuthContext = createContext({});
 
@@ -111,38 +112,37 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Verify token sa backend
-  const verifyToken = async (token) => {
-    try {
-      const response = await fetch('http://192.168.100.6:5000/api/auth/verify-token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        timeout: 10000,
-      });
+ const verifyToken = async (token) => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/verify-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      // Remove timeout property - not valid for fetch
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        return data.isSuccess;
-      }
-      return false;
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      // For network errors, assume token is still valid to allow offline usage
-      return true;
+    if (response.ok) {
+      const data = await response.json();
+      return data.isSuccess;
     }
-  };
+    return false;
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return true; // Allow offline usage
+  }
+};
 
   // FIXED: Login function with proper state management
-  const login = async (email, password) => {
-    try {
-      const response = await fetch('http://192.168.100.6:5000/api/auth/sign-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        timeout: 15000,
-      });
+const login = async (email, password) => {
+  try {
+    const response = await fetch(`${API_URL}/api/auth/sign-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      // Remove timeout property - not valid for fetch
+    });
 
       const data = await response.json();
 
