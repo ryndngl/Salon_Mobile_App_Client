@@ -92,7 +92,6 @@ const ServiceDetailScreen = () => {
       
       await toggleFavorite(service, styleObj);
     } catch (error) {
-      console.error("Error toggling favorite:", error);
     }
   };
 
