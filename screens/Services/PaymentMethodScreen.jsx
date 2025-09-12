@@ -1,15 +1,14 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
+  View, Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
   ScrollView,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const PaymentMethodScreen = () => {
   const [selectedMethod, setSelectedMethod] = useState(null);

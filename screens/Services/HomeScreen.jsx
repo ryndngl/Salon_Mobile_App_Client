@@ -10,7 +10,6 @@ import {
   Image,
   Dimensions,
   Modal,
-  SafeAreaView,
   ScrollView,
   Alert,
 } from "react-native";
@@ -19,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import BigServiceCard from "../../components/cards/BigServiceCard";
 import { useFavorites } from "../../context/FavoritesContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import API_URL from "../../config/api";
 
 const screenWidth = Dimensions.get("window").width;
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 48,
-    marginTop: 50,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: "#D4D4D4",
     elevation: 1,
@@ -1088,10 +1088,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 25,
     elevation: 2,
-    shadowColor: "#007d3f",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   addTestimonialText: {
     color: "#fff",
@@ -1123,8 +1119,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E8E8E8",
-    elevation: 2,
-    shadowColor: "#000",
+    elevation: 1,
   },
   userTestimonialCard: {
     backgroundColor: "#fff",
@@ -1184,8 +1179,7 @@ const styles = StyleSheet.create({
     right: 12,
     backgroundColor: "#fff",
     borderRadius: 8,
-    elevation: 2,
-    shadowColor: "#000",
+    elevation: 1,
     borderWidth: 1,
     borderColor: "#E8E8E8",
     zIndex: 10,

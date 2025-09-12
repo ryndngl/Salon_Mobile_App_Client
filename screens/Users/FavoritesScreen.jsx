@@ -28,58 +28,38 @@ export default function FavoritesScreen() {
 
   // DEBUG: Log favorites data structure
   useEffect(() => {
-    console.log('=== FAVORITES DEBUG ===');
-    console.log('Favorites count:', count);
-    console.log('Favorites array:', JSON.stringify(favorites, null, 2));
     
     if (favorites && favorites.length > 0) {
       favorites.forEach((fav, index) => {
-        console.log(`\n--- Favorite ${index + 1} ---`);
-        console.log('Name:', fav?.name);
-        console.log('Service:', fav?.service?.name);
-        console.log('Image field:', fav?.image);
-        console.log('Images field:', fav?.images);
-        console.log('Image type:', typeof fav?.image);
-        console.log('Images type:', typeof fav?.images);
-        console.log('Is images array?', Array.isArray(fav?.images));
       });
     }
   }, [favorites, count]);
 
   const openImageModal = (image) => {
-    console.log('Opening modal with image:', image);
     setSelectedImage(image);
     setModalVisible(true);
   };
 
   // Helper function to get proper image source
   const getImageSource = (imageData) => {
-    console.log('Processing image data:', imageData);
-    
     if (!imageData) {
-      console.log('No image data provided');
       return null;
     }
 
     // If it's already a proper source object
     if (typeof imageData === 'object' && (imageData.uri || imageData.require)) {
-      console.log('Image is already proper source object');
       return imageData;
     }
 
     // If it's a string URL
     if (typeof imageData === 'string') {
-      console.log('Converting string URL to source object');
       return { uri: imageData };
     }
 
     // If it's a require statement (number)
     if (typeof imageData === 'number') {
-      console.log('Image is require number');
       return imageData;
     }
-
-    console.log('Unknown image format');
     return null;
   };
 
@@ -156,9 +136,6 @@ export default function FavoritesScreen() {
     }
   );
 
-  console.log('Multi-image favorites:', multiImageFavorites.length);
-  console.log('Single-image favorites:', singleImageFavorites.length);
-
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       {/* Header with Clear All button */}
@@ -185,7 +162,6 @@ export default function FavoritesScreen() {
               >
                 {item.images.map((img, i) => {
                   const imageSource = getImageSource(img);
-                  console.log(`Multi-image ${i}:`, imageSource);
                   
                   return (
                     <Pressable key={i} onPress={() => openImageModal(imageSource)}>
@@ -254,8 +230,7 @@ export default function FavoritesScreen() {
             const favorite = isFavorite(item?.service?.name, item?.name);
             const rawImageSource = item.image || (Array.isArray(item.images) ? item.images[0] : null);
             const imageSource = getImageSource(rawImageSource);
-            
-            console.log(`Single-image ${index}:`, imageSource);
+          
             
             return (
               <View key={`single-${index}`} style={styles.card}>
@@ -369,7 +344,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   headerRight: {
-    width: 32, // Balance the back button
+    width: 32, 
   },
   clearAllButton: {
     paddingHorizontal: 12,
