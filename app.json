@@ -19,14 +19,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.salonbookingapp",
-      "config": {
-        "googleSignIn": {
-          "clientId": "YOUR_IOS_CLIENT_ID_FROM_GOOGLE_CLOUD_CONSOLE.apps.googleusercontent.com"
-        }
-      },
-      "associatedDomains": [
-        "applinks:auth.expo.io"
-      ],
       "infoPlist": {
         "CFBundleURLTypes": [
           {
@@ -42,15 +34,10 @@
     "android": {
       "package": "com.yourcompany.salonmobileapp",
       "edgeToEdgeEnabled": true,
-      "config": {
-        "googleSignIn": {
-          "clientId": "365428725051-3sss7nglu1bqmv121dl8hcjk561rnm7a.apps.googleusercontent.com"
-        }
-      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff",
-        "backgroundImage": "./assets/adaptive-icon-background.png" 
+        "backgroundImage": "./assets/adaptive-icon-background.png"
       },
       "intentFilters": [
         {
@@ -73,15 +60,12 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "redirectUri": "https://auth.expo.io/@ryandingle01/SalonBookingApp"
+      "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "webClientId": "365428725051-kmjh4jtck7n6kgs4etn8vvscj5228a56.apps.googleusercontent.com",
       "eas": {
         "projectId": "3a58fc89-466d-42b2-94f0-0a8eda491334"
       }
-    },
-    "plugins": ["expo-web-browser"]
+    }
   }
 }

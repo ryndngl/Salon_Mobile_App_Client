@@ -1,7 +1,3 @@
-import * as WebBrowser from "expo-web-browser";
-WebBrowser.maybeCompleteAuthSession();
-
-import "./firebaseConfig";
 
 import { useState, useEffect, useRef } from "react";
 import {
@@ -19,8 +15,6 @@ LogBox.ignoreLogs([
   "Warning: Text strings must be rendered within a <Text> component.",
 ]);
 
-import Toast from "react-native-toast-message";
-
 // Navigation
 import "react-native-screens";
 import { NavigationContainer } from "@react-navigation/native";
@@ -31,8 +25,7 @@ import { BookingProvider } from "./context/BookingContext";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-// Screens
-// Authentication
+// Screens - Authentication
 import LoginScreen from "./screens/Authentication/LoginScreen";
 import RegisterScreen from "./screens/Authentication/RegisterScreen";
 import GetStartedScreen from "./screens/Authentication/GetStartedScreen";
@@ -66,7 +59,7 @@ import BottomTabNavigator from "./navigation/BottomTabNavigator";
 const Stack = createNativeStackNavigator();
 const { width, height } = Dimensions.get("window");
 
-// UPDATED: Deep linking configuration for password reset
+// Deep linking configuration for password reset
 const linking = {
   prefixes: [
     "salonmobileapp://",
@@ -79,12 +72,11 @@ const linking = {
       LoginScreen: "login",
       Register: "register",
       ForgotPasswordScreen: "forgot-password",
-      // MAIN ROUTE: For password reset deep linking
       ResetPasswordScreen: {
         path: "ResetPasswordScreen",
         parse: {
           token: (token) => {
-            console.log("🔗 Deep link received token:", token);
+            console.log("Deep link received token:", token);
             return token;
           },
         },
@@ -98,7 +90,6 @@ const linking = {
           Services: "services",
         },
       },
-      // Help screens
       FAQs: "faqs",
       ContactUs: "contact-us",
       TermsConditions: "terms-conditions",
@@ -119,28 +110,25 @@ const AuthNavigator = () => {
 
   const splashFadeOut = useRef(new Animated.Value(1)).current;
 
-  // ADDED: Deep link handling
+  // Deep link handling
   useEffect(() => {
-    // Handle initial URL when app is opened via deep link
     const handleInitialURL = async () => {
       try {
         const initialUrl = await Linking.getInitialURL();
         if (initialUrl) {
-          console.log("🚀 App opened with URL:", initialUrl);
+          console.log("App opened with URL:", initialUrl);
         }
       } catch (error) {
-        console.error("❌ Error getting initial URL:", error);
+        console.error("Error getting initial URL:", error);
       }
     };
 
-    // Handle URLs when app is already running
     const handleDeepLink = (event) => {
-      console.log("🔗 Deep link received while app running:", event.url);
+      console.log("Deep link received while app running:", event.url);
     };
 
     handleInitialURL();
 
-    // Listen for incoming links
     const subscription = Linking.addEventListener("url", handleDeepLink);
 
     return () => {
@@ -166,11 +154,11 @@ const AuthNavigator = () => {
 
   if (isLoading) {
     return (
-        <ImageBackground
-          source={require("./assets/SplashScreenImage/BGIMG.jpg")}
-          style={styles.backgroundImage}
-          imageStyle={styles.backgroundImageStyle}>
-        </ImageBackground>
+      <ImageBackground
+        source={require("./assets/SplashScreenImage/BGIMG.jpg")}
+        style={styles.backgroundImage}
+        imageStyle={styles.backgroundImageStyle}
+      />
     );
   }
 
@@ -189,110 +177,106 @@ const AuthNavigator = () => {
   }
 
   return (
-  <Stack.Navigator
-    initialRouteName={
-      isAuthenticated ? "MainTabs" : isFirstTime ? "GetStarted" : "LoginScreen"
-    }
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
-    {/* UPDATED: Always available screens (including when authenticated) */}
-    <Stack.Screen 
-      name="GetStarted" 
-      component={GetStartedScreen} 
-      options={{ animation: "fade" }}
-    />
-    <Stack.Screen 
-      name="LoginScreen" 
-      component={LoginScreen}
-      options={{ animation: "none" }}   // 🚀 disable animation sa unang load
-    />
-    <Stack.Screen 
-      name="Register" 
-      component={RegisterScreen}
-      options={{ animation: "fade" }}
-    />
-    
-    {/* PASSWORD RESET SCREENS - Always available for deep linking */}
-    <Stack.Screen 
-      name="ForgotPasswordScreen" 
-      component={ForgotPasswordScreen}
-      options={{
-        title: "Forgot Password",
-        animation: "fade",
+    <Stack.Navigator
+      initialRouteName={
+        isAuthenticated ? "MainTabs" : isFirstTime ? "GetStarted" : "LoginScreen"
+      }
+      screenOptions={{
+        headerShown: false,
       }}
-    />
-    <Stack.Screen 
-      name="ResetPasswordScreen" 
-      component={ResetPasswordScreen}
-      options={{
-        title: "Reset Password",
-        animation: "fade",
-      }}
-    />
-    
-    {/* Help screens - always available */}
-    <Stack.Screen 
-      name="FAQs" 
-      component={FAQScreen} 
-      options={{ animation: "fade" }}
-    />
-    <Stack.Screen 
-      name="ContactUs" 
-      component={ContactUsScreen} 
-      options={{ animation: "fade" }}
-    />
-    <Stack.Screen 
-      name="TermsConditions" 
-      component={TermsConditionsScreen} 
-      options={{ animation: "fade" }}
-    />
-    <Stack.Screen 
-      name="PrivacyPolicy" 
-      component={PrivacyPolicyScreen} 
-      options={{ animation: "fade" }}
-    />
+    >
+      <Stack.Screen 
+        name="GetStarted" 
+        component={GetStartedScreen} 
+        options={{ animation: "fade" }}
+      />
+      <Stack.Screen 
+        name="LoginScreen" 
+        component={LoginScreen}
+        options={{ animation: "none" }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen}
+        options={{ animation: "fade" }}
+      />
+      
+      <Stack.Screen 
+        name="ForgotPasswordScreen" 
+        component={ForgotPasswordScreen}
+        options={{
+          title: "Forgot Password",
+          animation: "fade",
+        }}
+      />
+      <Stack.Screen 
+        name="ResetPasswordScreen" 
+        component={ResetPasswordScreen}
+        options={{
+          title: "Reset Password",
+          animation: "fade",
+        }}
+      />
+      
+      <Stack.Screen 
+        name="FAQs" 
+        component={FAQScreen} 
+        options={{ animation: "fade" }}
+      />
+      <Stack.Screen 
+        name="ContactUs" 
+        component={ContactUsScreen} 
+        options={{ animation: "fade" }}
+      />
+      <Stack.Screen 
+        name="TermsConditions" 
+        component={TermsConditionsScreen} 
+        options={{ animation: "fade" }}
+      />
+      <Stack.Screen 
+        name="PrivacyPolicy" 
+        component={PrivacyPolicyScreen} 
+        options={{ animation: "fade" }}
+      />
 
-    {/* Authenticated screens */}
-    {isAuthenticated && (
-      <>
-        <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
-        <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
-        <Stack.Screen
-          name="ServiceDetailScreen"
-          component={ServiceDetailScreen}
-        />
-        <Stack.Screen name="BookingScreen" component={BookingScreen} />
-        <Stack.Screen
-          name="BookingFormScreen"
-          component={BookingFormScreen}
-          options={{ title: "Booking Details", headerShown: true }}
-        />
-        <Stack.Screen
-          name="BookingSummaryScreen"
-          component={BookingSummaryScreen}
-        />
-        <Stack.Screen
-          name="PaymentMethodScreen"
-          component={PaymentMethodScreen}
-        />
-        <Stack.Screen
-          name="NotificationScreen"
-          component={NotificationScreen}
-          options={{ title: "Notifications", headerShown: true }}
-        />
-        <Stack.Screen
-          name="BookingConfirmationScreen"
-          component={BookingConfirmationScreen}
-        />
-        <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
-        <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
-        <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-      </>
-    )}
-  </Stack.Navigator>
-);
+      {isAuthenticated && (
+        <>
+          <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+          <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
+          <Stack.Screen
+            name="ServiceDetailScreen"
+            component={ServiceDetailScreen}
+          />
+          <Stack.Screen name="BookingScreen" component={BookingScreen} />
+          <Stack.Screen
+            name="BookingFormScreen"
+            component={BookingFormScreen}
+            options={{ title: "Booking Details", headerShown: true }}
+          />
+          <Stack.Screen
+            name="BookingSummaryScreen"
+            component={BookingSummaryScreen}
+          />
+          <Stack.Screen
+            name="PaymentMethodScreen"
+            component={PaymentMethodScreen}
+          />
+          <Stack.Screen
+            name="NotificationScreen"
+            component={NotificationScreen}
+            options={{ title: "Notifications", headerShown: true }}
+          />
+          <Stack.Screen
+            name="BookingConfirmationScreen"
+            component={BookingConfirmationScreen}
+          />
+          <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
+          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
 };
 
 // Main App Component
@@ -333,23 +317,22 @@ const AppContent = () => {
         <NavigationContainer
           linking={linking}
           onReady={() => {
-            console.log("🚀 Navigation is ready!");
+            console.log("Navigation is ready!");
           }}
           onStateChange={(state) => {
-            // Debug deep linking navigation
-            console.log("🧭 Navigation state changed");
+            console.log("Navigation state changed");
             if (state) {
               const currentRoute = state.routes[state.index];
-              console.log("📍 Current route:", currentRoute.name);
+              console.log("Current route:", currentRoute.name);
               if (currentRoute.params) {
-                console.log("📋 Route params:", currentRoute.params);
+                console.log("Route params:", currentRoute.params);
               }
             }
           }}
         >
           <AuthNavigator />
           <StatusBar style="dark" />
-          <Toast />
+        
         </NavigationContainer>
       </FavoritesProvider>
     </BookingProvider>
