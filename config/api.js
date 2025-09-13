@@ -2,17 +2,17 @@
 
 // Device configuration
 const DEVICE_TYPE = {
-  PC: 'pc',
-  LAPTOP: 'laptop'
+  PC: "pc",
+  LAPTOP: "laptop",
 };
 
 // Set this manually based on which device you're using
-const CURRENT_DEVICE = DEVICE_TYPE.LAPTOP; // Change to DEVICE_TYPE.PC when working on PC
+const CURRENT_DEVICE = DEVICE_TYPE.PC; // Change to DEVICE_TYPE.PC when working on PC
 
 // API URLs for different devices
 const API_CONFIGS = {
-  [DEVICE_TYPE.PC]: 'http://192.168.100.6:5000',      // Your PC IP (.6)
-  [DEVICE_TYPE.LAPTOP]: 'http://192.168.100.67:5000'  // Your laptop IP (.67)
+  [DEVICE_TYPE.PC]: "http://192.168.100.6:5000", // Your PC IP (.6)
+  [DEVICE_TYPE.LAPTOP]: "http://192.168.100.67:5000", // Your laptop IP (.67)
 };
 
 // Get current API URL based on device
