@@ -158,7 +158,6 @@ export const FavoritesProvider = ({ children }) => {
           };
           
           updatedFavorites = [...prev, favoriteItem];
-          console.log(`Added ${service.name} - ${style.name} to favorites`, favoriteItem);
         }
         
         // Save immediately after updating
@@ -169,7 +168,6 @@ export const FavoritesProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('Toggle favorite error:', error);
       return false;
     }
   };

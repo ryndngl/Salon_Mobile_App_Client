@@ -325,7 +325,6 @@ const AppContent = () => {
               const currentRoute = state.routes[state.index];
               console.log("Current route:", currentRoute.name);
               if (currentRoute.params) {
-                console.log("Route params:", currentRoute.params);
               }
             }
           }}
