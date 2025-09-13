@@ -18,11 +18,11 @@ import { useNavigation } from "@react-navigation/native";
 import BigServiceCard from "../../components/cards/BigServiceCard";
 import { useFavorites } from "../../context/FavoritesContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from "react-native-safe-area-context";
 import API_URL from "../../config/api";
 
 const screenWidth = Dimensions.get("window").width;
-const API_BASE_URL = API_URL.replace('/api', '') + '/api';
+const API_BASE_URL = API_URL.replace("/api", "") + "/api";
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -32,7 +32,7 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredStyles, setFilteredStyles] = useState([]);
   const [displayName, setDisplayName] = useState("");
-  const [showOptionsMenu, setShowOptionsMenu] = useState(null); 
+  const [showOptionsMenu, setShowOptionsMenu] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [servicesData, setServicesData] = useState([]);
@@ -49,7 +49,7 @@ const HomeScreen = () => {
   const [newTestimonial, setNewTestimonial] = useState({
     name: "",
     feedback: "",
-    rating: 5
+    rating: 5,
   });
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -60,19 +60,18 @@ const HomeScreen = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`${API_BASE_URL}/services`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setServicesData(data);
-      
     } catch (error) {
-      setError('Failed to load services. Please check your connection.');
-      
+      setError("Failed to load services. Please check your connection.");
+
       // Fallback to local data if API fails
       const fallbackServices = {
         services: [
@@ -82,7 +81,7 @@ const HomeScreen = () => {
           { _id: "4", name: "Rebond & Forms", styles: [] },
           { _id: "5", name: "Nail Care", styles: [] },
           { _id: "6", name: "Foot Spa", styles: [] },
-        ]
+        ],
       };
       setServicesData(fallbackServices);
     } finally {
@@ -90,144 +89,155 @@ const HomeScreen = () => {
     }
   };
 
-const fetchTestimonials = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/testimonials`);
-    
-    if (response.ok) {
-      const result = await response.json();
-      const allTestimonials = result.data || [];
-      
-      // Get current user data from AsyncStorage to ensure we have the latest
-      const storedUser = await AsyncStorage.getItem("user");
-      let currentUser = userObj;
-      
-      if (storedUser) {
-        currentUser = JSON.parse(storedUser);
+  const fetchTestimonials = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/testimonials`);
+
+      if (response.ok) {
+        const result = await response.json();
+        const allTestimonials = result.data || [];
+
+        // Get current user data from AsyncStorage to ensure we have the latest
+        const storedUser = await AsyncStorage.getItem("user");
+        let currentUser = userObj;
+
+        if (storedUser) {
+          currentUser = JSON.parse(storedUser);
+        }
+
+        if (currentUser && (currentUser.id || currentUser._id)) {
+          const currentUserId = (currentUser.id || currentUser._id)
+            .toString()
+            .trim();
+
+          const userTestimonials = allTestimonials.filter((t) => {
+            if (!t.userId) return false;
+            const testimonialUserId = t.userId.toString().trim();
+            return testimonialUserId === currentUserId;
+          });
+
+          const otherTestimonials = allTestimonials.filter((t) => {
+            if (!t.userId) return true; // Non-authenticated testimonials go to others
+            const testimonialUserId = t.userId.toString().trim();
+            return testimonialUserId !== currentUserId;
+          });
+
+          console.log("Current User ID:", currentUserId);
+          console.log("User Testimonials:", userTestimonials.length);
+          console.log("Other Testimonials:", otherTestimonials.length);
+
+          setUserTestimonials(userTestimonials);
+          setTestimonials(otherTestimonials);
+        } else {
+          // If no user is logged in, show all as customer testimonials
+          setTestimonials(allTestimonials);
+          setUserTestimonials([]);
+        }
       }
-      
-      if (currentUser && (currentUser.id || currentUser._id)) {
-        const currentUserId = (currentUser.id || currentUser._id).toString().trim();
-        
-        const userTestimonials = allTestimonials.filter(t => {
-          if (!t.userId) return false;
-          const testimonialUserId = t.userId.toString().trim();
-          return testimonialUserId === currentUserId;
-        });
-        
-        const otherTestimonials = allTestimonials.filter(t => {
-          if (!t.userId) return true; // Non-authenticated testimonials go to others
-          const testimonialUserId = t.userId.toString().trim();
-          return testimonialUserId !== currentUserId;
-        });
-        
-        console.log('Current User ID:', currentUserId);
-        console.log('User Testimonials:', userTestimonials.length);
-        console.log('Other Testimonials:', otherTestimonials.length);
-        
-        setUserTestimonials(userTestimonials);
-        setTestimonials(otherTestimonials);
-      } else {
-        // If no user is logged in, show all as customer testimonials
-        setTestimonials(allTestimonials);
-        setUserTestimonials([]);
-      }
+    } catch (error) {
+      console.error("Error fetching testimonials:", error);
+      // Silent fail for testimonials
     }
-  } catch (error) {
-    console.error('Error fetching testimonials:', error);
-    // Silent fail for testimonials
-  }
-};
+  };
 
   const createTestimonial = async (testimonialData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/testimonials`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(testimonialData),
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok) {
         return { success: true, data: result.data };
       } else {
         return { success: false, message: result.message };
       }
     } catch (error) {
-      return { success: false, message: 'Network error occurred' };
+      return { success: false, message: "Network error occurred" };
     }
   };
 
   // Fixed updateTestimonial function
-const updateTestimonial = async (testimonialId, testimonialData) => {
-  try {
-    // IMPORTANT: Remove any undefined or invalid fields
-    const cleanData = {
-      name: testimonialData.name,
-      feedback: testimonialData.feedback,
-      rating: testimonialData.rating || 5
-    };
-
-    const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(cleanData), 
-    });
-    
-    const responseText = await response.text(); 
-    
+  const updateTestimonial = async (testimonialId, testimonialData) => {
     try {
-      const result = JSON.parse(responseText); 
-      
-      if (response.ok) {
-        return { success: true, data: result.data };
-      } else {
-        return { success: false, message: result.message };
+      // IMPORTANT: Remove any undefined or invalid fields
+      const cleanData = {
+        name: testimonialData.name,
+        feedback: testimonialData.feedback,
+        rating: testimonialData.rating || 5,
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/testimonials/${testimonialId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(cleanData),
+        }
+      );
+
+      const responseText = await response.text();
+
+      try {
+        const result = JSON.parse(responseText);
+
+        if (response.ok) {
+          return { success: true, data: result.data };
+        } else {
+          return { success: false, message: result.message };
+        }
+      } catch (parseError) {
+        return { success: false, message: "Invalid response from server" };
       }
-    } catch (parseError) {
-      return { success: false, message: 'Invalid response from server' };
+    } catch (error) {
+      return { success: false, message: "Network error occurred" };
     }
-  } catch (error) {
-    return { success: false, message: 'Network error occurred' };
-  }
-};
+  };
 
   const deleteTestimonial = async (testimonialId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/testimonials/${testimonialId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    const responseText = await response.text();
-    
     try {
-      const result = responseText ? JSON.parse(responseText) : {};
-      
-      if (response.ok) {
-        return { success: true };
-      } else {
-        return { success: false, message: result.message || 'Failed to delete' };
+      const response = await fetch(
+        `${API_BASE_URL}/testimonials/${testimonialId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const responseText = await response.text();
+
+      try {
+        const result = responseText ? JSON.parse(responseText) : {};
+
+        if (response.ok) {
+          return { success: true };
+        } else {
+          return {
+            success: false,
+            message: result.message || "Failed to delete",
+          };
+        }
+      } catch (parseError) {
+        // If delete was successful but returned empty response
+        if (response.ok) {
+          return { success: true };
+        }
+        return { success: false, message: "Invalid response from server" };
       }
-    } catch (parseError) {
-      // If delete was successful but returned empty response
-      if (response.ok) {
-        return { success: true };
-      }
-      return { success: false, message: 'Invalid response from server' };
+    } catch (error) {
+      console.error("Error deleting testimonial:", error);
+      return { success: false, message: "Network error occurred" };
     }
-  } catch (error) {
-    console.error('Error deleting testimonial:', error);
-    return { success: false, message: 'Network error occurred' };
-  }
-};
+  };
 
   const searchStyles = async (query) => {
     if (!query.trim()) {
@@ -237,7 +247,9 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(query)}`
+        `${API_BASE_URL}/services/search/styles?query=${encodeURIComponent(
+          query
+        )}`
       );
 
       if (response.ok) {
@@ -245,7 +257,9 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
         const results = apiResponse.data?.results || [];
         const dataWithIds = results.map((item, index) => ({
           ...item,
-          searchId: `${item.serviceName || 'unknown'}-${item.name || item._id || index}`,
+          searchId: `${item.serviceName || "unknown"}-${
+            item.name || item._id || index
+          }`,
         }));
         setFilteredStyles(dataWithIds);
       } else {
@@ -257,8 +271,9 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
   };
 
   const performLocalSearch = (query) => {
-    const servicesList = servicesData.services || servicesData.data || servicesData || [];
-    
+    const servicesList =
+      servicesData.services || servicesData.data || servicesData || [];
+
     const results = servicesList.flatMap((service) =>
       (service.styles || [])
         .filter((style) =>
@@ -267,46 +282,48 @@ const updateTestimonial = async (testimonialId, testimonialData) => {
         .map((style) => ({
           ...style,
           serviceName: service.name,
-          searchId: `${service.name}-${style.name || style._id || Math.random()}`,
+          searchId: `${service.name}-${
+            style.name || style._id || Math.random()
+          }`,
         }))
     );
     setFilteredStyles(results);
   };
 
- 
-// Replace the existing useEffect for initialization
-useEffect(() => {
-  const initializeApp = async () => {
-    try {
-      const storedUser = await AsyncStorage.getItem("user");
-      const storedToken = await AsyncStorage.getItem("token");
-      
-      if (storedUser && storedToken) {
-        const userData = JSON.parse(storedUser);
-        setUserObj(userData);
-        const userName = userData.fullName || userData.name || userData.displayName;
-        setDisplayName(userName || "User");
-        setUserToken(storedToken);
-        
-        // Load services first, then testimonials
-        await fetchServices();
-        // Wait a bit to ensure userObj is set before fetching testimonials
-        setTimeout(async () => {
-          await fetchTestimonials();
-        }, 100);
-      } else {
-        navigation.replace('LoginScreen');
-      }
-    } catch (error) {
-      console.error('Initialization error:', error);
-      navigation.replace('LoginScreen');
-    } finally {
-      setIsInitialLoad(false);
-    }
-  };
+  // Replace the existing useEffect for initialization
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        const storedToken = await AsyncStorage.getItem("token");
 
-  initializeApp();
-}, [navigation]);
+        if (storedUser && storedToken) {
+          const userData = JSON.parse(storedUser);
+          setUserObj(userData);
+          const userName =
+            userData.fullName || userData.name || userData.displayName;
+          setDisplayName(userName || "User");
+          setUserToken(storedToken);
+
+          // Load services first, then testimonials
+          await fetchServices();
+          // Wait a bit to ensure userObj is set before fetching testimonials
+          setTimeout(async () => {
+            await fetchTestimonials();
+          }, 100);
+        } else {
+          navigation.replace("LoginScreen");
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+        navigation.replace("LoginScreen");
+      } finally {
+        setIsInitialLoad(false);
+      }
+    };
+
+    initializeApp();
+  }, [navigation]);
 
   useEffect(() => {
     if (userObj && !isInitialLoad) {
@@ -322,17 +339,17 @@ useEffect(() => {
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, servicesData]);
 
-useEffect(() => {
-  const handleTouchOutside = () => {
-    if (showOptionsMenu) {
-      setShowOptionsMenu(null);
-    }
-  };
+  useEffect(() => {
+    const handleTouchOutside = () => {
+      if (showOptionsMenu) {
+        setShowOptionsMenu(null);
+      }
+    };
 
-  return () => {
-    setShowOptionsMenu(null);
-  };
-}, [showOptionsMenu]);
+    return () => {
+      setShowOptionsMenu(null);
+    };
+  }, [showOptionsMenu]);
 
   const openImageModal = (image) => {
     setSelectedImage(image);
@@ -348,54 +365,65 @@ useEffect(() => {
     {
       name: "Hair Cut",
       description: "Stylish cuts tailored to your look.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircut_dnayis.webp",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircut_dnayis.webp",
     },
     {
       name: "Hair Color",
       description: "Transform your hair with vibrant, lasting colors.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircolor_bk135m.webp",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/haircolor_bk135m.webp",
     },
     {
       name: "Hair Treatment",
-      description: "Revitalize and strengthen your hair for a healthy, shiny look.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375430/hairtreatment_ddzkdc.webp",
+      description:
+        "Revitalize and strengthen your hair for a healthy, shiny look.",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375430/hairtreatment_ddzkdc.webp",
     },
     {
       name: "Rebond & Forms",
       description: "Get sleek, straight, and perfectly styled hair.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/rebondandforms_ydvsyo.webp",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/rebondandforms_ydvsyo.webp",
     },
     {
       name: "Nail Care",
-      description: "Keep your nails healthy, polished, and beautifully designed.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/nailcare_izbusf.webp",
+      description:
+        "Keep your nails healthy, polished, and beautifully designed.",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375431/nailcare_izbusf.webp",
     },
     {
       name: "Foot Spa",
       description: "Relax and rejuvenate your feet with soothing care.",
-      image: "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375432/footspa_idzcx1.webp",
+      image:
+        "https://res.cloudinary.com/dyw0qxjzn/image/upload/v1756375432/footspa_idzcx1.webp",
     },
   ];
 
   const handleServicePress = async (serviceName) => {
     try {
       setLoading(true);
-      
-      const response = await fetch(`${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`);
-      
+
+      const response = await fetch(
+        `${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const apiResponse = await response.json();
       const selectedService = apiResponse.data || apiResponse;
-      
+
       if (selectedService && selectedService.name) {
-        navigation.navigate("ServiceDetailScreen", { service: selectedService });
+        navigation.navigate("ServiceDetailScreen", {
+          service: selectedService,
+        });
       } else {
         Alert.alert("Service Not Found", "This service is not available yet.");
       }
-      
     } catch (error) {
       Alert.alert("Error", "Failed to load service details. Please try again.");
     } finally {
@@ -409,20 +437,21 @@ useEffect(() => {
       return;
     }
 
-    const existingUserTestimonial = [...testimonials, ...userTestimonials].find(t => 
-      t.userId && userObj && t.userId.toString() === userObj.id?.toString()
+    const existingUserTestimonial = [...testimonials, ...userTestimonials].find(
+      (t) =>
+        t.userId && userObj && t.userId.toString() === userObj.id?.toString()
     );
 
     if (existingUserTestimonial) {
       Alert.alert(
-        "Review Already Exists", 
+        "Review Already Exists",
         "You already have a testimonial. You can edit your existing review instead.",
         [
           { text: "Cancel", style: "cancel" },
-          { 
-            text: "Edit Existing", 
-            onPress: () => openEditModal(existingUserTestimonial)
-          }
+          {
+            text: "Edit Existing",
+            onPress: () => openEditModal(existingUserTestimonial),
+          },
         ]
       );
       return;
@@ -435,7 +464,7 @@ useEffect(() => {
       feedback: newTestimonial.feedback.trim(),
       rating: newTestimonial.rating || 5,
       userId: userObj?.id || userObj?._id,
-      userEmail: userObj?.email
+      userEmail: userObj?.email,
     };
 
     const result = await createTestimonial(testimonialData);
@@ -463,7 +492,7 @@ useEffect(() => {
     const testimonialData = {
       name: newTestimonial.name.trim(),
       feedback: newTestimonial.feedback.trim(),
-      rating: newTestimonial.rating || 5
+      rating: newTestimonial.rating || 5,
     };
 
     if (userObj && userObj.id) {
@@ -495,12 +524,15 @@ useEffect(() => {
           style: "destructive",
           onPress: async () => {
             const result = await deleteTestimonial(testimonialId);
-            
+
             if (result.success) {
               fetchTestimonials();
               Alert.alert("Success", "Testimonial deleted successfully!");
             } else {
-              Alert.alert("Error", result.message || "Failed to delete testimonial");
+              Alert.alert(
+                "Error",
+                result.message || "Failed to delete testimonial"
+              );
             }
           },
         },
@@ -512,7 +544,7 @@ useEffect(() => {
     setNewTestimonial({
       name: testimonial.name,
       feedback: testimonial.feedback,
-      rating: testimonial.rating || 5
+      rating: testimonial.rating || 5,
     });
     setEditingId(testimonial._id);
     setIsEditMode(true);
@@ -526,82 +558,89 @@ useEffect(() => {
     setEditingId(null);
   };
 
-const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
-  return (
-    <View key={item._id || index} style={[
-      styles.testimonialCard,
-      isUserTestimonial && styles.userTestimonialCard
-    ]}>
-      <View style={styles.testimonialHeader}>
-        <View style={styles.testimonialUserInfo}>
-          <Text style={styles.testimonialName}>{item.name}</Text>
-          <View style={styles.ratingAndDate}>
-            <View style={styles.ratingContainer}>
-              {[...Array(5)].map((_, i) => (
-                <Icon
-                  key={i}
-                  name={i < (item.rating || 5) ? "star" : "star-outline"}
-                  size={16}
-                  color="#ffb000"
-                  style={{ marginRight: 2 }}
-                />
-              ))}
+  const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
+    return (
+      <View
+        key={item._id || index}
+        style={[
+          styles.testimonialCard,
+          isUserTestimonial && styles.userTestimonialCard,
+        ]}
+      >
+        <View style={styles.testimonialHeader}>
+          <View style={styles.testimonialUserInfo}>
+            <Text style={styles.testimonialName}>{item.name}</Text>
+            <View style={styles.ratingAndDate}>
+              <View style={styles.ratingContainer}>
+                {[...Array(5)].map((_, i) => (
+                  <Icon
+                    key={i}
+                    name={i < (item.rating || 5) ? "star" : "star-outline"}
+                    size={16}
+                    color="#ffb000"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
+              </View>
+              <Text style={styles.testimonialDate}>
+                {new Date(item.createdAt).toLocaleDateString("en-US", {
+                  month: "numeric",
+                  day: "numeric",
+                  year: "2-digit",
+                })}
+              </Text>
             </View>
-            <Text style={styles.testimonialDate}>
-              {new Date(item.createdAt).toLocaleDateString('en-US', {
-                month: 'numeric',
-                day: 'numeric',
-                year: '2-digit'
-              })}
-            </Text>
           </View>
+
+          {isUserTestimonial && (
+            <TouchableOpacity
+              onPress={() =>
+                setShowOptionsMenu(
+                  showOptionsMenu === item._id ? null : item._id
+                )
+              }
+              style={styles.optionsButton}
+            >
+              <Icon name="ellipsis-vertical" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
         </View>
 
+        <Text style={styles.testimonialMessage}>{item.feedback}</Text>
+
         {isUserTestimonial && (
-          <TouchableOpacity
-            onPress={() => setShowOptionsMenu(showOptionsMenu === item._id ? null : item._id)}
-            style={styles.optionsButton}
-          >
-            <Icon name="ellipsis-vertical" size={20} color="#666" />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              onPress={() => openEditModal(item)}
+              style={styles.editReviewButton}
+            >
+              <Text style={styles.editReviewText}>Edit your review</Text>
+            </TouchableOpacity>
+
+            {showOptionsMenu === item._id && (
+              <View style={styles.optionsMenu}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowOptionsMenu(null);
+                    handleDeleteTestimonial(item._id);
+                  }}
+                  style={styles.deleteOption}
+                >
+                  <Text style={styles.deleteOptionText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
       </View>
-
-      <Text style={styles.testimonialMessage}>{item.feedback}</Text>
-
-      {isUserTestimonial && (
-        <>
-          <TouchableOpacity
-            onPress={() => openEditModal(item)}
-            style={styles.editReviewButton}
-          >
-            <Text style={styles.editReviewText}>Edit your review</Text>
-          </TouchableOpacity>
-
-          {showOptionsMenu === item._id && (
-            <View style={styles.optionsMenu}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowOptionsMenu(null);
-                  handleDeleteTestimonial(item._id);
-                }}
-                style={styles.deleteOption}
-              >
-                <Text style={styles.deleteOptionText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
-      )}
-    </View>
-  );
-};
+    );
+  };
 
   const renderTestimonialModal = () => (
     <Modal
       visible={showTestimonialModal}
       transparent={true}
-      animationType="slide"
+      animationType="fade"
       onRequestClose={resetTestimonialModal}
     >
       <View style={styles.modalOverlay}>
@@ -644,11 +683,17 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
             {[1, 2, 3, 4, 5].map((rating) => (
               <TouchableOpacity
                 key={rating}
-                onPress={() => setNewTestimonial(prev => ({ ...prev, rating }))}
+                onPress={() =>
+                  setNewTestimonial((prev) => ({ ...prev, rating }))
+                }
                 style={styles.starButton}
               >
                 <Icon
-                  name={rating <= (newTestimonial.rating || 5) ? "star" : "star-outline"}
+                  name={
+                    rating <= (newTestimonial.rating || 5)
+                      ? "star"
+                      : "star-outline"
+                  }
                   size={32}
                   color="#ffcc00"
                 />
@@ -667,11 +712,17 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
 
             <TouchableOpacity
               style={[styles.modalButton, styles.submitButton]}
-              onPress={isEditMode ? handleEditTestimonial : handleAddTestimonial}
+              onPress={
+                isEditMode ? handleEditTestimonial : handleAddTestimonial
+              }
               disabled={testimonialLoading}
             >
               <Text style={styles.submitButtonText}>
-                {testimonialLoading ? "Processing..." : (isEditMode ? "Update" : "Submit")}
+                {testimonialLoading
+                  ? "Processing..."
+                  : isEditMode
+                  ? "Update"
+                  : "Submit"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -697,7 +748,7 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
       {userTestimonials.length > 0 && (
         <View style={styles.userTestimonialsSection}>
           <Text style={styles.sectionSubtitle}>Your Reviews</Text>
-          {userTestimonials.map((item, index) => 
+          {userTestimonials.map((item, index) =>
             renderTestimonialCard(item, index, true)
           )}
         </View>
@@ -708,7 +759,9 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
           <Text style={styles.sectionSubtitle}>
             {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
           </Text>
-          {testimonials.map((item, index) => renderTestimonialCard(item, index, false))}
+          {testimonials.map((item, index) =>
+            renderTestimonialCard(item, index, false)
+          )}
         </View>
       ) : (
         <View style={styles.emptyTestimonials}>
@@ -758,10 +811,7 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
         {displayServices.map((service, index) => (
           <TouchableOpacity
             key={index}
-            style={[
-              styles.serviceCard,
-              loading && styles.serviceCardDisabled
-            ]}
+            style={[styles.serviceCard, loading && styles.serviceCardDisabled]}
             onPress={() => handleServicePress(service.name)}
             activeOpacity={0.8}
             disabled={loading}
@@ -773,7 +823,7 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
                 resizeMode="cover"
               />
             </View>
-            
+
             <View style={styles.serviceContent}>
               <Text style={styles.serviceTitle} numberOfLines={2}>
                 {service.name}
@@ -836,8 +886,13 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
           keyboardShouldPersistTaps="handled"
           data={filteredStyles}
           keyExtractor={(item, index) => {
-              return item.searchId || `${item.serviceName || 'unknown'}-${item.name || 'unnamed'}-${index}`;
-           }}
+            return (
+              item.searchId ||
+              `${item.serviceName || "unknown"}-${
+                item.name || "unnamed"
+              }-${index}`
+            );
+          }}
           numColumns={1}
           contentContainerStyle={{
             paddingHorizontal: 16,
@@ -846,33 +901,35 @@ const renderTestimonialCard = (item, index, isUserTestimonial = false) => {
             gap: 12,
           }}
           renderItem={({ item }) => {
-           const isFootSpa = item.serviceName
-             .toLowerCase()
-             .includes("foot spa");
-           return (
-             <BigServiceCard
-               serviceName={item.serviceName}
-               styleData={item}  
-               onImagePress={() => openImageModal(item.imageUrl || item.image)}  
-               onBookPress={() =>
-                 navigation.navigate("BookingFormScreen", {
-                   serviceName: item.serviceName,
-                   styleName: item.name,
-                   stylePrice: item.price,
-                 })
-               }
-               isFootSpa={isFootSpa}
-               searchCard={true}
-             />
-           );
-         }}
+            const isFootSpa = item.serviceName
+              .toLowerCase()
+              .includes("foot spa");
+            return (
+              <BigServiceCard
+                serviceName={item.serviceName}
+                styleData={item}
+                onImagePress={() => openImageModal(item.imageUrl || item.image)}
+                onBookPress={() =>
+                  navigation.navigate("BookingFormScreen", {
+                    serviceName: item.serviceName,
+                    styleName: item.name,
+                    stylePrice: item.price,
+                  })
+                }
+                isFootSpa={isFootSpa}
+                searchCard={true}
+              />
+            );
+          }}
           ListEmptyComponent={
             loading ? (
               <View style={styles.loadingContainer}>
                 <Text style={styles.loadingText}>Searching...</Text>
               </View>
             ) : (
-              <Text style={{ textAlign: "center", color: "#888", marginTop: 20 }}>
+              <Text
+                style={{ textAlign: "center", color: "#888", marginTop: 20 }}
+              >
                 No results found.
               </Text>
             )
@@ -1001,7 +1058,7 @@ const styles = StyleSheet.create({
     color: "#d13f3f",
     textTransform: "uppercase",
     letterSpacing: 1.8,
-    textShadowColor: 'rgba(0, 0, 0, 0.08)',
+    textShadowColor: "rgba(0, 0, 0, 0.08)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
@@ -1061,7 +1118,7 @@ const styles = StyleSheet.create({
     opacity: 0.95,
     letterSpacing: 0.2,
   },
-  
+
   // Testimonial Section Styles
   testimonialsSection: {
     marginTop: 30,
@@ -1117,12 +1174,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "#E8E8E8",
-    elevation: 1,
+    elevation: 0.5,
   },
   userTestimonialCard: {
     backgroundColor: "#fff",
+    borderColor: "#E8E8E8",
+    borderWidth: 0.5,
     borderColor: "#E8E8E8",
   },
   testimonialHeader: {
