@@ -3,9 +3,10 @@
     "name": "SalonMobileApp",
     "slug": "SalonMobileApp",
     "version": "1.0.0",
+    "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": true, 
     "scheme": "salonmobileapp",
     "icon": "./assets/icon.png",
     "splash": {
@@ -13,9 +14,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.salonbookingapp",
@@ -23,10 +22,7 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "salonmobileapp",
-            "CFBundleURLSchemes": [
-              "salonmobileapp",
-              "exp"
-            ]
+            "CFBundleURLSchemes": ["salonmobileapp", "exp"]
           }
         ]
       }
@@ -52,10 +48,7 @@
               "port": 19000
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
