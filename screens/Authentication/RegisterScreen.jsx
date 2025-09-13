@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
-const API_URL = 'http://192.168.100.67:5000';
+import API_URL from '../../config/api';;
+
 
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
@@ -23,7 +24,6 @@ export default function RegisterScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
-  
 
   const handleRegister = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -64,7 +64,10 @@ export default function RegisterScreen({ navigation }) {
         throw new Error(data.message || "Registration failed");
       }
 
-      Alert.alert("Success", `Welcome, ${fullName}! Your account has been created.`);
+      Alert.alert(
+        "Success",
+        `Welcome, ${fullName}! Your account has been created.`
+      );
       navigation.navigate("LoginScreen");
     } catch (error) {
       Alert.alert("Registration Error", error.message);
@@ -78,7 +81,13 @@ export default function RegisterScreen({ navigation }) {
     navigation.navigate("LoginScreen");
   };
 
-  const isFormValid = fullName && email && password && confirmPassword && agreedToTerms && !loading;
+  const isFormValid =
+    fullName &&
+    email &&
+    password &&
+    confirmPassword &&
+    agreedToTerms &&
+    !loading;
 
   return (
     <View style={styles.container}>
@@ -86,7 +95,7 @@ export default function RegisterScreen({ navigation }) {
         style={styles.keyboardView}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -177,19 +186,22 @@ export default function RegisterScreen({ navigation }) {
                   style={styles.linkText}
                   onPress={() => navigation.navigate("TermsConditions")}
                 >
-                  {" "}Terms and Conditions{" "}
+                  {" "}
+                  Terms and Conditions{" "}
                 </Text>
                 and
                 <Text
                   style={styles.linkText}
                   onPress={() => navigation.navigate("PrivacyPolicy")}
                 >
-                  {" "}Privacy Policy{" "}
-                </Text>.
+                  {" "}
+                  Privacy Policy{" "}
+                </Text>
+                .
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.button, !isFormValid && styles.buttonDisabled]}
               onPress={handleRegister}
               disabled={!isFormValid}
@@ -201,10 +213,7 @@ export default function RegisterScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              onPress={handleLoginRedirect}
-              disabled={loading}
-            >
+            <TouchableOpacity onPress={handleLoginRedirect} disabled={loading}>
               <Text style={styles.loginText}>
                 Already have an account?{" "}
                 <Text style={styles.loginLink}>Login here.</Text>
@@ -227,7 +236,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
