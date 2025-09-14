@@ -17,7 +17,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const API_URL = 'http://192.168.100.67:5000';
+import API_URL from '../../config/api';;
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
