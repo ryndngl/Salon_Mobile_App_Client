@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
@@ -25,33 +24,40 @@ import { BookingProvider } from "./context/BookingContext";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-// Screens - Authentication
-import LoginScreen from "./screens/Authentication/LoginScreen";
-import RegisterScreen from "./screens/Authentication/RegisterScreen";
-import GetStartedScreen from "./screens/Authentication/GetStartedScreen";
-import ForgotPasswordScreen from "./screens/Authentication/ForgotPasswordScreen";
-import ResetPasswordScreen from "./screens/Authentication/ResetPasswordScreen";
-
-// Services
-import ServicesScreen from "./screens/Services/ServicesScreen";
-import ServiceDetailScreen from "./screens/Services/ServiceDetailScreen";
-import BookingScreen from "./screens/Services/BookingScreen";
-import BookingFormScreen from "./screens/Services/BookingFormScreen";
-import PaymentMethodScreen from "./screens/Services/PaymentMethodScreen";
-import BookingSummaryScreen from "./screens/Services/BookingSummaryScreen";
-import BookingConfirmationScreen from "./screens/Services/BookingConfirmationScreen";
-
-// Users
-import FavoritesScreen from "./screens/Users/FavoritesScreen";
-import NotificationScreen from "./screens/Users/NotificationScreen";
-import SettingsScreen from "./screens/Users/SettingsScreen";
-import ProfileScreen from "./screens/Users/ProfileScreen";
-
-// Support
-import FAQScreen from "./screens/Support/FAQScreen";
-import ContactUsScreen from "./screens/Support/ContactUsScreen";
-import TermsConditionsScreen from "./screens/Users/TermsConditionsScreen";
-import PrivacyPolicyScreen from "./screens/Users/PrivacyPolicyScreen";
+// Components - Clean organized imports
+import {
+  // Auth Components
+  LoginScreen,
+  RegisterScreen,
+  GetStartedScreen,
+  ForgotPasswordScreen,
+  ResetPasswordScreen,
+  
+  // Service Components
+  ServicesScreen,
+  ServiceDetailScreen,
+  
+  // Booking Components
+  BookingFormScreen,
+  BookingSummaryScreen,
+  BookingConfirmationScreen,
+  BookingScreen,
+  
+  // Payment Components
+  PaymentMethodScreen,
+  
+  // Profile Components
+  FavoritesScreen,
+  NotificationScreen,
+  SettingsScreen,
+  ProfileScreen,
+  TermsConditionsScreen,
+  PrivacyPolicyScreen,
+  
+  // Support Components
+  FAQScreen,
+  ContactUsScreen,
+} from "./components";
 
 // Top-level Navigators
 import BottomTabNavigator from "./navigation/BottomTabNavigator";
