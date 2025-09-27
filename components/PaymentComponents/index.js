@@ -1,0 +1,1 @@
+export { default as PaymentMethodScreen } from './PaymentMethodScreen';
