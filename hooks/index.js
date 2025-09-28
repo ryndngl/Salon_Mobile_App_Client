@@ -8,3 +8,5 @@ export { useRegisterForm } from './useRegisterForm';
 export { useForgotPasswordAnimation } from './useForgotPasswordAnimation';  
 export { useTokenValidation } from './useTokenValidation';                  
 export { useForgotPassword } from './useForgotPassword';               
+export { useResetPasswordAnimation } from './useResetPasswordAnimation';
+export { useResetPassword } from './useResetPassword';
