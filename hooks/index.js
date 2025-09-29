@@ -10,3 +10,4 @@ export { useTokenValidation } from './useTokenValidation';
 export { useForgotPassword } from './useForgotPassword';               
 export { useResetPasswordAnimation } from './useResetPasswordAnimation';
 export { useResetPassword } from './useResetPassword';
+export { useBookingForm } from './useBookingForm';
