@@ -27,3 +27,7 @@ export { useServiceDetail } from './useServiceDetail';
 export { useProfileData } from './useProfileData';
 export { usePhoneEditor } from './usePhoneEditor';
 export { useLogoutFlow } from './useLogoutFlow';
+
+// FavoritesScreen hooks
+export { useImageModal } from './useImageModal';
+export { useFavoritesData } from './useFavoritesData';
