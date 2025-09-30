@@ -4,11 +4,11 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useNavigation } from "@react-navigation/native";
 
 // Components - same directory imports
-import FavoritesHeader from "./FavoritesHeader.jsx";
-import EmptyFavoritesView from "./EmptyFavoritesView.jsx";
-import FavoriteCard from "./FavoriteCard.jsx";
-import FavoriteFullWidthCard from "./FavoriteFullWidthCard.jsx";
-import ImageModal from "./ImageModal.jsx";
+import FavoritesHeader from "./FavoritesHeader";
+import EmptyFavoritesView from "./EmptyFavoritesView";
+import FavoriteCard from "./FavoriteCard";
+import FavoriteFullWidthCard from "./FavoriteFullWidthCard";
+import ImageModal from "./ImageModal";
 
 // Hooks - from hooks folder
 import { useImageModal, useFavoritesData } from "../hooks";
