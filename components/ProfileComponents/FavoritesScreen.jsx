@@ -1,17 +1,17 @@
 import React, { useEffect } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
-import { useFavorites } from "../context/FavoritesContext";
+import { useFavorites } from "../../context/FavoritesContext";
 import { useNavigation } from "@react-navigation/native";
 
-// Components - same directory imports
-import FavoritesHeader from "./FavoritesHeader";
-import EmptyFavoritesView from "./EmptyFavoritesView";
-import FavoriteCard from "./FavoriteCard";
-import FavoriteFullWidthCard from "./FavoriteFullWidthCard";
-import ImageModal from "./ImageModal";
+// I-change to NAMED IMPORTS (with curly braces)
+import { FavoritesHeader } from "./FavoritesHeader";
+import { EmptyFavoritesView } from "./EmptyFavoritesView";
+import { FavoriteCard } from "./FavoriteCard";
+import { FavoriteFullWidthCard } from "./FavoriteFullWidthCard";
+import { ImageModal } from "./ImageModal";
 
-// Hooks - from hooks folder
-import { useImageModal, useFavoritesData } from "../hooks";
+// Hooks - From hooks folder
+import { useImageModal, useFavoritesData } from "../../hooks";
 
 export default function FavoritesScreen() {
   const navigation = useNavigation();
@@ -126,3 +126,5 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
 });
+
+      
