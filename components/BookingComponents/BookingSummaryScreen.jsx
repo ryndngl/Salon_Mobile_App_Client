@@ -68,7 +68,7 @@ const BookingSummaryScreen = () => {
 
         <View style={[styles.row, { borderTopWidth: 1, borderTopColor: '#eee', marginTop: 10, paddingTop: 10 }]}>
           <Text style={styles.label}>Estimated Price:</Text>
-          <Text style={[styles.value, { fontWeight: 'bold', color: '#333' }]}>₱{bookingDetails.price}</Text>
+          <Text style={[styles.value, { fontWeight: 'bold', color: '#333' }]}>{bookingDetails.price}</Text>
         </View>
       </View>
 

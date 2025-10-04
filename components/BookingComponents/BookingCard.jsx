@@ -16,8 +16,9 @@ export default function BookingCard({
       <Text style={styles.detail}>Date: {item.date}</Text>
       <Text style={styles.detail}>Time: {item.time}</Text>
       <Text style={styles.detail}>Payment Method: {item.paymentMethod}</Text>
-      <Text style={styles.detail}>Price: ₱{item.price}</Text>
-      {item.totalprice && <Text style={styles.detail}>Total: ₱{item.totalprice}</Text>}
+      <Text style={styles.detail}>Price: {item.price}</Text>
+      {item.totalprice && <Text style={styles.detail}>Total: {item.totalprice}
+      </Text>}
       <Text style={styles.detail}>Status: {item.status}</Text>
 
       {/* Cancel button for upcoming bookings */}

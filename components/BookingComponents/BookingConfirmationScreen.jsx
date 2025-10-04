@@ -109,13 +109,13 @@ const BookingConfirmationScreen = () => {
 
             <View style={styles.row}>
               <Text style={styles.label}>Price:</Text>
-              <Text style={styles.value}>₱{price}</Text>
+              <Text style={styles.value}>{price}</Text>
             </View>
 
             {totalprice && (
               <View style={styles.row}>
                 <Text style={styles.label}>Total Price:</Text>
-                <Text style={styles.value}>₱{totalprice}</Text>
+                <Text style={styles.value}>{totalprice}</Text>
               </View>
             )}
           </View>
