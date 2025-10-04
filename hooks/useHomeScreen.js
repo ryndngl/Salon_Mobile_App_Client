@@ -89,35 +89,43 @@ export const useHomeScreen = () => {
   }, [searchQuery, servicesData]);
 
   // Handlers
-  const handleServicePress = async (serviceName) => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch(
-        `${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`
-      );
+ const handleServicePress = async (serviceName) => {
+  try {
+    setLoading(true);
+    
+    const response = await fetch(
+      `${API_BASE_URL}/services/name/${encodeURIComponent(serviceName)}`
+    );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const apiResponse = await response.json();
-      const selectedService = apiResponse.data || apiResponse;
-
-      if (selectedService && selectedService.name) {
-        navigation.navigate("ServiceDetailScreen", {
-          service: selectedService,
-        });
-      } else {
-        Alert.alert("Service Not Found", "This service is not available yet.");
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to load service details. Please try again.");
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
 
+    const apiResponse = await response.json();
+    const selectedService = apiResponse.data || apiResponse;
+
+    // ADD THIS DEBUG LOG
+    console.log('=== SERVICE DATA ===');
+    console.log('Service name:', selectedService.name);
+    console.log('Has categories:', !!selectedService.categories);
+    console.log('Categories count:', selectedService.categories?.length);
+    console.log('Full service:', JSON.stringify(selectedService, null, 2));
+    console.log('==================');
+
+    if (selectedService && selectedService.name) {
+      navigation.navigate("ServiceDetailScreen", {
+        service: selectedService,
+      });
+    } else {
+      Alert.alert("Service Not Found", "This service is not available yet.");
+    }
+  } catch (error) {
+    console.error('Error details:', error); // ADD THIS TOO
+    Alert.alert("Error", "Failed to load service details. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
   const openImageModal = (image) => {
     setSelectedImage(image);
     setModalVisible(true);

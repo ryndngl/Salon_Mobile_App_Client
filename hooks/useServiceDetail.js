@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useFavorites } from '../context/FavoritesContext';
 import { extractImages } from '../utils/imageHelper';
@@ -8,7 +8,13 @@ export const useServiceDetail = () => {
   const navigation = useNavigation();
   const { toggleFavorite, isFavorite } = useFavorites();
 
-  const { service } = route.params || {};
+  // Get service from params (passed by HomeScreen)
+  const { service: passedService } = route.params || {};
+  
+  // State
+  const [service, setService] = useState(passedService || null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Service type detection
   const isHairCut = service?.name?.trim().toLowerCase() === 'hair cut';
@@ -24,6 +30,14 @@ export const useServiceDetail = () => {
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [viewerImageSource, setViewerImageSource] = useState(null);
+
+  // Update selected category when service changes
+  useEffect(() => {
+    if (service) {
+      const newCategory = isHairCut ? 'Men' : (isHairColor ? 'Root Touch Up' : null);
+      setSelectedCategory(newCategory);
+    }
+  }, [service, isHairCut, isHairColor]);
 
   // Filter styles based on category
   const filteredStyles = service?.styles?.filter((style) => {
@@ -86,6 +100,8 @@ export const useServiceDetail = () => {
   return {
     // Service data
     service,
+    loading,
+    error,
     isHairCut,
     isHairColor,
     isFootSpa,

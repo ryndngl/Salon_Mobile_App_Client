@@ -23,17 +23,18 @@ export const useApi = () => {
       const data = await response.json();
       setServicesData(data);
     } catch (error) {
+      console.error('Fetch services error:', error);
       setError("Failed to load services. Please check your connection.");
       
-      // Fallback data
+      // Fallback data with categories structure
       const fallbackServices = {
         services: [
-          { _id: "1", name: "Hair Cut", styles: [] },
-          { _id: "2", name: "Hair Color", styles: [] },
-          { _id: "3", name: "Hair Treatment", styles: [] },
-          { _id: "4", name: "Rebond & Forms", styles: [] },
-          { _id: "5", name: "Nail Care", styles: [] },
-          { _id: "6", name: "Foot Spa", styles: [] },
+          { _id: "1", name: "Hair Cut", categories: [] },
+          { _id: "2", name: "Hair Color", categories: [] },
+          { _id: "3", name: "Hair Treatment", categories: [] },
+          { _id: "4", name: "Rebond & Forms", categories: [] },
+          { _id: "5", name: "Nail Care", categories: [] },
+          { _id: "6", name: "Foot Spa", categories: [] },
         ],
       };
       setServicesData(fallbackServices);
@@ -63,6 +64,7 @@ export const useApi = () => {
         return performLocalSearch(query);
       }
     } catch (error) {
+      console.error('Search error:', error);
       return performLocalSearch(query);
     }
   };
@@ -70,8 +72,25 @@ export const useApi = () => {
   const performLocalSearch = (query) => {
     const servicesList = servicesData.services || servicesData.data || servicesData || [];
 
-    return servicesList.flatMap((service) =>
-      (service.styles || [])
+    return servicesList.flatMap((service) => {
+      // Handle new structure with categories
+      if (service.categories && Array.isArray(service.categories)) {
+        return service.categories.flatMap((category) =>
+          (category.styles || [])
+            .filter((style) =>
+              style.name?.toLowerCase().includes(query.toLowerCase())
+            )
+            .map((style) => ({
+              ...style,
+              category: category.name, // Add category name
+              serviceName: service.name,
+              searchId: `${service.name}-${category.name}-${style.name || style.id || Math.random()}`,
+            }))
+        );
+      }
+      
+      // Fallback for old structure (backward compatibility)
+      return (service.styles || [])
         .filter((style) =>
           style.name?.toLowerCase().includes(query.toLowerCase())
         )
@@ -79,8 +98,8 @@ export const useApi = () => {
           ...style,
           serviceName: service.name,
           searchId: `${service.name}-${style.name || style._id || Math.random()}`,
-        }))
-    );
+        }));
+    });
   };
 
   return {
