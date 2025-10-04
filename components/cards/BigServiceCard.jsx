@@ -60,15 +60,11 @@ const BigServiceCard = ({
 
   const handleBookPress = () => onBookPress?.();
 
-  // FIXED: Create proper service object and use correct isFavorite check
   const handleFavoritePress = async () => {
-    // Create a proper service object
     const serviceObj = service || { name: actualServiceName };
     
-    // Create a proper style object with all necessary data
     const styleObj = {
       ...styleData,
-      // Ensure we have extracted images properly
       ...(isFootSpaService && { images: extractImages(styleData) })
     };
 
@@ -78,12 +74,10 @@ const BigServiceCard = ({
     }
   };
 
-  // FIXED: Use the correct parameters for isFavorite check
   const checkIsFavorite = () => {
     return isFavorite(actualServiceName, styleData?.name);
   };
 
-  // Extract images once, before usage
   const imagesArray = Array.isArray(extractImages(styleData))
     ? extractImages(styleData)
     : [];
@@ -118,7 +112,7 @@ const BigServiceCard = ({
               <Text style={styles.footSpaTitle} numberOfLines={2}>
                 {styleData?.name || "Unnamed Style"}
               </Text>
-              <Text style={styles.footSpaPrice}>₱{styleData?.price}</Text>
+              <Text style={styles.footSpaPrice}>{styleData?.price}</Text>
             </View>
 
             {styleData?.description && (
@@ -155,7 +149,6 @@ const BigServiceCard = ({
           )}
         </TouchableOpacity>
 
-        {/* Centralized Image Viewer Modal */}
         <ImageView
           visible={imageViewerVisible}
           image={viewerImageSource}
@@ -220,7 +213,7 @@ const BigServiceCard = ({
 
           {styleData?.price && (
             <Text style={[styles.price, searchCard && styles.searchPrice]}>
-              ₱{styleData.price}
+              {styleData.price}
             </Text>
           )}
 
@@ -242,7 +235,6 @@ const BigServiceCard = ({
         </View>
       </TouchableOpacity>
 
-      {/* Centralized Image Viewer Modal */}
       <ImageView
         visible={imageViewerVisible}
         image={viewerImageSource}
@@ -274,7 +266,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   
-  // FOOT SPA CARD STYLES - VERTICAL LAYOUT WITH THREE IMAGES AT TOP
   footSpaCard: {
     width: "100%",
     backgroundColor: '#fff',
@@ -352,7 +343,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   
-  // Regular Card Styles
   imageWrapper: {
     position: 'relative',
     width: '100%',
