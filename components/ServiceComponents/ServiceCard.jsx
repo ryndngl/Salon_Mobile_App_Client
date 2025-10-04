@@ -27,7 +27,9 @@ export default function ServiceCard({
       <View style={styles.cardContent}>
         <View style={styles.namePriceRow}>
           <Text style={styles.styleName}>{style.name}</Text>
-          <Text style={styles.price}>₱{style.price}</Text>
+         <Text style={styles.price}>
+        {style.price.startsWith('₱') ? style.price : `₱${style.price}`}
+       </Text>
         </View>
 
         {style.description && (

@@ -31,7 +31,7 @@ export default function FootSpaCard({
       <View style={styles.footSpaContent}>
         <View style={styles.footSpaNamePriceRow}>
           <Text style={styles.footSpaStyleName} numberOfLines={2}>{style.name}</Text>
-          <Text style={styles.footSpaPrice}>₱{style.price}</Text>
+         <Text style={styles.footSpaPrice}>{style.price}</Text>
         </View>
 
         {style.description && (

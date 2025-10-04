@@ -15,7 +15,7 @@ import FootSpaCard from './FootSpaCard';
 import ImageView from "../../utils/ImageView";
 
 export default function ServiceDetailScreen() {
-  // Custom hook
+  // Custom hook - REMOVE loading and error from here
   const {
     service,
     isHairCut,
@@ -35,8 +35,8 @@ export default function ServiceDetailScreen() {
     hasMultipleImages,
   } = useServiceDetail();
 
-  // Error state
-  if (!service || !service.name || !service.styles) {
+  // Error state - simple check lang
+  if (!service || !service.name) {
     return <ErrorState />;
   }
 
