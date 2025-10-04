@@ -1,5 +1,5 @@
 // services/api.js
-import API_URL from '../config/api';
+import API_URL from "../config/api";
 
 export const authAPI = {
   signIn: async (email, password) => {
