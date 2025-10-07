@@ -21,11 +21,6 @@ export const useApi = () => {
       }
 
       const data = await response.json();
-      console.log('Services data fetched:', {
-        hasData: !!data,
-        servicesCount: data?.services?.length || 0,
-        structure: Object.keys(data || {})
-      });
       setServicesData(data);
     } catch (error) {
       console.error('Fetch services error:', error);
@@ -49,15 +44,11 @@ export const useApi = () => {
   };
 
   const searchStyles = async (query) => {
-    // Trim and validate query
     const trimmedQuery = query.trim();
     
     if (!trimmedQuery) {
-      console.log('Empty query, returning empty results');
       return [];
     }
-
-    console.log(`🔍 Searching for: "${trimmedQuery}"`);
 
     try {
       const response = await fetch(
@@ -67,11 +58,9 @@ export const useApi = () => {
       if (response.ok) {
         const apiResponse = await response.json();
         const results = apiResponse.data?.results || [];
-        console.log(`API Search found ${results.length} results`);
         
         // If API returns no results, fallback to local search
         if (results.length === 0) {
-          console.log('API returned 0 results, using local search fallback');
           return performLocalSearch(trimmedQuery);
         }
         
@@ -80,7 +69,6 @@ export const useApi = () => {
           searchId: `${item.serviceName || "unknown"}-${item.name || item._id || index}`,
         }));
       } else {
-        console.log(`API returned status ${response.status}, using local search`);
         return performLocalSearch(trimmedQuery);
       }
     } catch (error) {
@@ -90,31 +78,15 @@ export const useApi = () => {
   };
 
   const performLocalSearch = (query) => {
-    console.log('Performing local search...');
-    
-    // Normalize query - lowercase and trim
     const normalizedQuery = query.toLowerCase().trim();
     
-    // Get services list with multiple fallbacks
     const servicesList = servicesData.services || 
                         servicesData.data?.services || 
                         servicesData.data || 
                         servicesData || 
                         [];
 
-    console.log('Services data structure:', {
-      totalServices: servicesList.length,
-      firstService: servicesList[0] ? {
-        name: servicesList[0].name,
-        hasCategories: !!servicesList[0].categories,
-        categoriesCount: servicesList[0].categories?.length,
-        hasStyles: !!servicesList[0].styles,
-        stylesCount: servicesList[0].styles?.length
-      } : 'No services'
-    });
-
     if (!Array.isArray(servicesList) || servicesList.length === 0) {
-      console.log('No services data available for search');
       return [];
     }
 
@@ -133,7 +105,6 @@ export const useApi = () => {
               const categoryNameLower = category.name?.toLowerCase().trim() || '';
               const description = style.description?.toLowerCase().trim() || '';
               
-              // Search in multiple fields
               return styleName.includes(normalizedQuery) ||
                      serviceNameLower.includes(normalizedQuery) ||
                      categoryNameLower.includes(normalizedQuery) ||
@@ -148,7 +119,7 @@ export const useApi = () => {
         });
       }
       
-      // Fallback for old structure (backward compatibility)
+      // Fallback for old structure
       const styles = service.styles || [];
       
       return styles
@@ -159,7 +130,6 @@ export const useApi = () => {
           const serviceNameLower = service.name?.toLowerCase().trim() || '';
           const description = style.description?.toLowerCase().trim() || '';
           
-          // Search in multiple fields
           return styleName.includes(normalizedQuery) ||
                  serviceNameLower.includes(normalizedQuery) ||
                  description.includes(normalizedQuery);
@@ -171,12 +141,6 @@ export const useApi = () => {
         }));
     });
 
-    console.log(`Local search found ${results.length} results for "${query}"`);
-    
-    if (results.length > 0) {
-      console.log('First result:', results[0].name, '-', results[0].serviceName);
-    }
-    
     return results;
   };
 
