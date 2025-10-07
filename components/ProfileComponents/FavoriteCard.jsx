@@ -51,9 +51,9 @@ export function FavoriteCard({
 
         <View style={styles.namePriceRow}>
           <Text style={styles.styleName}>{item?.name}</Text>
-        <Text style={styles.price}>
-          {styles.price.startsWith('₱') ? styles.price : `₱${styles .price}`}
-         </Text>
+          <Text style={styles.price}>
+            {item?.price?.toString().startsWith('₱') ? item.price : `₱${item.price}`}
+          </Text>
         </View>
 
         {item?.description && (
