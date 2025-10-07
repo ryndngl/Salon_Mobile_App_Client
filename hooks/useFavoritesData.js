@@ -8,14 +8,20 @@ export function useFavoritesData(favorites, clearFavorites, count) {
       return { multiImageFavorites: [], singleImageFavorites: [] };
     }
 
+    // Multi-image: Items with images array that has MORE THAN 1 image
     const multiImage = favorites.filter(
-      (f) => Array.isArray(f.images) && f.images.length > 0
+      (f) => Array.isArray(f.images) && f.images.length > 1
     );
 
+    // Single-image: Items with either:
+    // 1. images array with exactly 1 item, OR
+    // 2. single image property (no array)
     const singleImage = favorites.filter((f) => {
-      const hasMultipleImages = Array.isArray(f.images) && f.images.length > 0;
+      const hasMultipleImages = Array.isArray(f.images) && f.images.length > 1;
+      const hasSingleImageInArray = Array.isArray(f.images) && f.images.length === 1;
       const hasSingleImage = f.image;
-      return !hasMultipleImages && hasSingleImage;
+      
+      return !hasMultipleImages && (hasSingleImageInArray || hasSingleImage);
     });
 
     return { multiImageFavorites: multiImage, singleImageFavorites: singleImage };
