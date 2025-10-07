@@ -1,29 +1,29 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function DeleteAllButton({ onDeleteAll }) {
   return (
     <TouchableOpacity 
-      style={styles.deleteAllButton} 
+      style={styles.deleteAllButton}
       onPress={onDeleteAll}
     >
-      <Text style={styles.deleteAllText}>Delete All Cancelled</Text>
+      <Icon name="trash-outline" size={20} color="#fff" />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   deleteAllButton: {
-    marginHorizontal: 20,
-    marginBottom: 10,
-    paddingVertical: 10,
-    backgroundColor: "#d13f3f",
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  deleteAllText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+    position: 'absolute',
+    top: 0,
+    right: 20,
+    backgroundColor: '#d13f3f',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 });
