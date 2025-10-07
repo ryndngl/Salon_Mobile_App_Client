@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, FlatList, SafeAreaView } from "react-native";
+import { StyleSheet, FlatList, SafeAreaView, View } from "react-native";
 
 // Import custom hook
 import { useBookingManagement } from "../../hooks";
@@ -35,14 +35,19 @@ export default function BookingScreen() {
     <SafeAreaView style={styles.container}>
       <BookingHeader />
 
-      <BookingTabs 
-        selectedTab={selectedTab} 
-        onTabChange={handleTabChange} 
-      />
-
-      {selectedTab === "Cancelled" && filteredBookings.length > 0 && (
-        <DeleteAllButton onDeleteAll={handleDeleteAllCancelled} />
-      )}
+      <View style={styles.tabsWrapper}>
+        <BookingTabs 
+          selectedTab={selectedTab} 
+          onTabChange={handleTabChange} 
+        />
+        
+        {/* Delete All button - aligned with tabs on right side */}
+        {selectedTab === "Cancelled" && filteredBookings.length > 0 && (
+          <View style={styles.deleteButtonContainer}>
+            <DeleteAllButton onDeleteAll={handleDeleteAllCancelled} />
+          </View>
+        )}
+      </View>
 
       {filteredBookings.length > 0 ? (
         <FlatList
@@ -83,7 +88,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  tabsWrapper: {
+    position: 'relative',
+  },
+  deleteButtonContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 20,
+    zIndex: 20,
+  },
   list: {
     paddingBottom: 40,
+    paddingTop: 35,
   },
 });
