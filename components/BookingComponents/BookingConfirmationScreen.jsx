@@ -8,16 +8,23 @@ import {
   Modal,
   StatusBar,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBooking } from "../../context/BookingContext";
+import { useAuth } from "../../context/AuthContext"; // ADD THIS
+import { appointmentApi } from "../../api/appointmentApi"; // ADD THIS
 
 const BookingConfirmationScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { addBooking } = useBooking();
+  const { user } = useAuth(); // ADD THIS - Get user info
+  
   const [modalVisible, setModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // ADD THIS - Loading state
 
   const { bookingDetails } = route.params || {};
   const {
@@ -33,27 +40,88 @@ const BookingConfirmationScreen = () => {
     status,
   } = bookingDetails || {};
 
-  const handleFinalConfirm = () => {
-    const bookingData = {
-      name,
-      serviceName,
-      category,
-      style,
-      date,
-      time,
-      paymentMethod,
-      price,
-      totalprice,
-      status: "pending",
-    };
+  // UPDATED: Handle final confirmation with API call
+  const handleFinalConfirm = async () => {
+    try {
+      setIsLoading(true);
 
-    addBooking(bookingData);
-    setModalVisible(false);
+      // Prepare appointment data for backend
+      const appointmentData = {
+        clientId: user?.id || user?._id, // User ID from AuthContext
+        clientName: user?.fullName || user?.name || name,
+        email: user?.email || "N/A",
+        phone: user?.phone || "N/A",
+        services: [serviceName], // Backend expects array
+        date: date, // Format: "YYYY-MM-DD"
+        time: time, // Format: "10:00 AM"
+        modeOfPayment: paymentMethod || "Cash",
+      };
 
-    navigation.navigate("MainTabs", {
-      screen: "Bookings",
-      params: { bookingDetails: bookingData },
-    });
+      console.log("Sending appointment data:", appointmentData);
+
+      // Call API to create appointment
+      const response = await appointmentApi.createAppointment(appointmentData);
+
+      if (response.success) {
+        // Success! Save to local context as well (for immediate display)
+        const bookingData = {
+          name: appointmentData.clientName,
+          serviceName,
+          category,
+          style,
+          date,
+          time,
+          paymentMethod,
+          price,
+          totalprice,
+          status: "pending",
+          _id: response.data?._id, // Save the backend ID
+        };
+
+        addBooking(bookingData);
+        setModalVisible(false);
+
+        // Show success message
+        Alert.alert(
+          "Success! ✅",
+          "Your appointment has been confirmed. You will receive a confirmation shortly.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                navigation.navigate("MainTabs", {
+                  screen: "Bookings",
+                  params: { bookingDetails: bookingData },
+                });
+              },
+            },
+          ]
+        );
+      } else {
+        // API call failed
+        throw new Error(response.message || "Failed to create appointment");
+      }
+    } catch (error) {
+      console.error("Booking confirmation error:", error);
+      
+      // Show error message
+      Alert.alert(
+        "Booking Failed ❌",
+        error.message || "Unable to confirm your appointment. Please try again or contact support.",
+        [
+          {
+            text: "Retry",
+            onPress: () => handleFinalConfirm(),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +138,17 @@ const BookingConfirmationScreen = () => {
           <View style={styles.card}>
             <View style={styles.row}>
               <Text style={styles.label}>Name:</Text>
-              <Text style={styles.value}>{name}</Text>
+              <Text style={styles.value}>{user?.fullName || user?.name || name}</Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={styles.label}>Email:</Text>
+              <Text style={styles.value}>{user?.email || "N/A"}</Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={styles.label}>Phone:</Text>
+              <Text style={styles.value}>{user?.phone || "N/A"}</Text>
             </View>
 
             <View style={styles.row}>
@@ -123,37 +201,52 @@ const BookingConfirmationScreen = () => {
           <TouchableOpacity
             style={styles.proceedButton}
             onPress={() => setModalVisible(true)}
+            disabled={isLoading}
           >
             <Text style={styles.proceedButtonText}>Confirm Booking</Text>
           </TouchableOpacity>
         </ScrollView>
 
+        {/* UPDATED MODAL: Added loading state */}
         <Modal
           visible={modalVisible}
           animationType="fade"
           transparent
           statusBarTranslucent
-          onRequestClose={() => setModalVisible(false)}
+          onRequestClose={() => !isLoading && setModalVisible(false)}
         >
           <View style={styles.fullscreenModal}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalText}>
-                Confirm payment via {paymentMethod}?
-              </Text>
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  style={styles.cancelBtn}
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleFinalConfirm}
-                  style={styles.confirmBtn}
-                >
-                  <Text style={styles.confirmText}>Confirm</Text>
-                </TouchableOpacity>
-              </View>
+              {isLoading ? (
+                // Loading state
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#4CAF50" />
+                  <Text style={styles.loadingText}>
+                    Processing your booking...
+                  </Text>
+                </View>
+              ) : (
+                // Confirmation dialog
+                <>
+                  <Text style={styles.modalText}>
+                    Confirm payment via {paymentMethod}?
+                  </Text>
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={styles.cancelBtn}
+                    >
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleFinalConfirm}
+                      style={styles.confirmBtn}
+                    >
+                      <Text style={styles.confirmText}>Confirm</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         </Modal>
@@ -258,5 +351,17 @@ const styles = StyleSheet.create({
   confirmText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  // NEW STYLES: Loading state
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
 });
