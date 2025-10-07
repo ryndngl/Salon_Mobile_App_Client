@@ -7,7 +7,6 @@ const Header = ({ displayName, onNotificationPress }) => {
   return (
     <View style={styles.container}>
       <View style={styles.left}>
-        <Icon name="person-circle-outline" size={70} color="#555" style={styles.profileIcon} />
         <View>
           <Text style={styles.greeting}>Welcome back!</Text>
           <Text style={styles.name}>{displayName}</Text>
@@ -37,9 +36,6 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  profileIcon: {
-    marginRight: 12,
   },
   greeting: {
     fontSize: 16,
