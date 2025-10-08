@@ -11,7 +11,7 @@ export const BookingProvider = ({ children }) => {
     ...prev,
     { ...booking, status: booking.status || "pending" }, // ✅ fallback
   ]);
-};
+};  
 
 
   return (
