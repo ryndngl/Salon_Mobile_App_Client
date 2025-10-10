@@ -1,6 +1,6 @@
 // screens/HomeScreen/components/TestimonialsSection.jsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTestimonials } from '../../hooks';
 import TestimonialCard from './TestimonialCard';
@@ -17,64 +17,79 @@ const TestimonialsSection = ({ userObj }) => {
     setShowOptionsMenu,
     handleDeleteTestimonial,
     openEditModal,
+    refreshing,
+    onRefresh,
   } = useTestimonials(userObj);
+
   return (
-    <View style={styles.container}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>What Our Clients Say</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowTestimonialModal(true)}
-        >
-          <Icon name="chatbubble-ellipses" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add Review</Text>
-        </TouchableOpacity>
+    <ScrollView
+      nestedScrollEnabled={true}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#007d3f']}
+          tintColor="#007d3f"
+        />
+      }
+    >
+      <View style={styles.container}>
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>What Our Clients Say</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowTestimonialModal(true)}
+          >
+            <Icon name="chatbubble-ellipses" size={20} color="#fff" />
+            <Text style={styles.addButtonText}>Add Review</Text>
+          </TouchableOpacity>
 
-        <TestimonialModal
-      visible={showTestimonialModal}
-      {...testimonialModalProps}
-    />
+          <TestimonialModal
+            visible={showTestimonialModal}
+            {...testimonialModalProps}
+          />
+        </View>
+
+        {userTestimonials.length > 0 && (
+          <View style={styles.userTestimonialsSection}>
+            <Text style={styles.sectionSubtitle}>Your Reviews</Text>
+            {userTestimonials.map((item, index) => (
+              <TestimonialCard
+                key={item._id || index}
+                testimonial={item}
+                isUserTestimonial={true}
+                showOptionsMenu={showOptionsMenu}
+                setShowOptionsMenu={setShowOptionsMenu}
+                onEdit={openEditModal}
+                onDelete={handleDeleteTestimonial}
+              />
+            ))}
+          </View>
+        )}
+
+        {testimonials.length > 0 ? (
+          <View style={styles.allTestimonialsSection}>
+            <Text style={styles.sectionSubtitle}>
+              {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
+            </Text>
+            {testimonials.map((item, index) => (
+              <TestimonialCard
+                key={item._id || index}
+                testimonial={item}
+                isUserTestimonial={false}
+              />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyTestimonials}>
+            <Icon name="chatbubbles-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyTestimonialsText}>
+              No reviews yet. Be the first to share your experience!
+            </Text>
+          </View>
+        )}
       </View>
-
-      {userTestimonials.length > 0 && (
-        <View style={styles.userTestimonialsSection}>
-          <Text style={styles.sectionSubtitle}>Your Reviews</Text>
-          {userTestimonials.map((item, index) => (
-            <TestimonialCard
-              key={item._id || index}
-              testimonial={item}
-              isUserTestimonial={true}
-              showOptionsMenu={showOptionsMenu}
-              setShowOptionsMenu={setShowOptionsMenu}
-              onEdit={openEditModal}
-              onDelete={handleDeleteTestimonial}
-            />
-          ))}
-        </View>
-      )}
-
-      {testimonials.length > 0 ? (
-        <View style={styles.allTestimonialsSection}>
-          <Text style={styles.sectionSubtitle}>
-            {userTestimonials.length > 0 ? "Other Reviews" : "Customer Reviews"}
-          </Text>
-          {testimonials.map((item, index) => (
-            <TestimonialCard
-              key={item._id || index}
-              testimonial={item}
-              isUserTestimonial={false}
-            />
-          ))}
-        </View>
-      ) : (
-        <View style={styles.emptyTestimonials}>
-          <Icon name="chatbubbles-outline" size={48} color="#ccc" />
-          <Text style={styles.emptyTestimonialsText}>
-            No reviews yet. Be the first to share your experience!
-          </Text>
-        </View>
-      )}
-    </View>
+    </ScrollView>
   );
 };
 

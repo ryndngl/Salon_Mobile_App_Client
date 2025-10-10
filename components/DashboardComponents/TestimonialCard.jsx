@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {formatDateTime} from '../../utils/dateFormatter';
 
 const TestimonialCard = ({ 
   testimonial, 
@@ -11,6 +12,9 @@ const TestimonialCard = ({
   onEdit,
   onDelete
 }) => {
+  // Use updatedAt if available, otherwise use createdAt
+  const displayDate = testimonial.updatedAt || testimonial.createdAt;
+
   return (
     <View style={[
       styles.container,
@@ -32,11 +36,7 @@ const TestimonialCard = ({
               ))}
             </View>
             <Text style={styles.date}>
-              {new Date(testimonial.createdAt).toLocaleDateString("en-US", {
-                month: "numeric",
-                day: "numeric",
-                year: "2-digit",
-              })}
+              {formatDateTime(displayDate)}
             </Text>
           </View>
         </View>
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
   },
   date: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
     fontWeight: "400",
   },
