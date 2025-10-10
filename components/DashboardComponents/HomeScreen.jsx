@@ -22,7 +22,9 @@ const HomeScreen = () => {
     // Other states
     loading,
     displayName,
-     userObj,
+    userObj,
+    refreshing,    // ADD THIS
+    onRefresh,     // ADD THIS
 
     // Handlers
     handleServicePress,
@@ -44,7 +46,9 @@ const HomeScreen = () => {
           loading={loading}
           onServicePress={handleServicePress}
           onImagePress={openImageModal}
-           userObj={userObj}
+          userObj={userObj}
+          refreshing={refreshing}    // ADD THIS
+          onRefresh={onRefresh}      // ADD THIS
         />
       ) : (
         <SearchResults
