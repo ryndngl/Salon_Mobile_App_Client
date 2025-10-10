@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native'; // ✅ ADD RefreshControl
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import custom hook
@@ -15,7 +15,7 @@ import FootSpaCard from './FootSpaCard';
 import ImageView from "../../utils/ImageView";
 
 export default function ServiceDetailScreen() {
-  // Custom hook - REMOVE loading and error from here
+  // Custom hook
   const {
     service,
     isHairCut,
@@ -33,6 +33,8 @@ export default function ServiceDetailScreen() {
     handleToggleFavorite,
     checkIsFavorite,
     hasMultipleImages,
+    refreshing, // ✅ ADD THIS
+    onRefresh,  // ✅ ADD THIS
   } = useServiceDetail();
 
   // Error state - simple check lang
@@ -73,7 +75,17 @@ export default function ServiceDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        refreshControl={ // ✅ ADD THIS
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#007d3f']} // Android - green color
+            tintColor="#007d3f"  // iOS - green color
+          />
+        }
+      >
         <ServiceDetailHeader serviceName={service.name} />
 
         <CategoryTabs
