@@ -19,6 +19,13 @@ export const useTestimonials = (userObj) => {
   const [editingId, setEditingId] = useState(null);
   const [testimonialLoading, setTestimonialLoading] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+  setRefreshing(true);
+  await fetchTestimonials();
+  setRefreshing(false);
+};
 
   const fetchTestimonials = async () => {
     try {
@@ -81,34 +88,33 @@ export const useTestimonials = (userObj) => {
       return { success: false, message: "Network error occurred" };
     }
   };
+const updateTestimonial = async (testimonialId, testimonialData) => {
+  try {
+    const cleanData = {
+      name: testimonialData.name,
+      feedback: testimonialData.feedback,
+      rating: testimonialData.rating || 5,
+    };
 
-  const updateTestimonial = async (testimonialId, testimonialData) => {
-    try {
-      const cleanData = {
-        name: testimonialData.name,
-        feedback: testimonialData.feedback,
-        rating: testimonialData.rating || 5,
-      };
+    const response = await fetch(
+      `${API_BASE_URL}/testimonials/${testimonialId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cleanData),
+      }
+    );
 
-      const response = await fetch(
-        `${API_BASE_URL}/testimonials/${testimonialId}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(cleanData),
-        }
-      );
+    const responseText = await response.text();
+    const result = JSON.parse(responseText);
 
-      const responseText = await response.text();
-      const result = JSON.parse(responseText);
-
-      return response.ok
-        ? { success: true, data: result.data }
-        : { success: false, message: result.message };
-    } catch (error) {
-      return { success: false, message: "Network error occurred" };
-    }
-  };
+    return response.ok
+      ? { success: true, data: result.data }
+      : { success: false, message: result.message };
+  } catch (error) {
+    return { success: false, message: "Network error occurred" };
+  }
+};
 
   const deleteTestimonial = async (testimonialId) => {
     try {
@@ -230,7 +236,7 @@ export const useTestimonials = (userObj) => {
       ]
     );
   };
-
+ 
   const openEditModal = (testimonial) => {
     setNewTestimonial({
       name: testimonial.name,
@@ -275,5 +281,7 @@ export const useTestimonials = (userObj) => {
     fetchTestimonials,
     handleDeleteTestimonial,
     openEditModal,
+    refreshing,
+    onRefresh,
   };
 };

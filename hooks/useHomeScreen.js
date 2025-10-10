@@ -31,6 +31,7 @@ export const useHomeScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Custom hooks
   const { 
@@ -85,6 +86,7 @@ export const useHomeScreen = () => {
       searchStyles(searchQuery).then(setFilteredStyles);
     }, 400);
 
+
     return () => clearTimeout(delayDebounce);
   }, [searchQuery, servicesData]);
 
@@ -136,6 +138,21 @@ export const useHomeScreen = () => {
     Keyboard.dismiss();
   };
 
+// Refresh handler
+const onRefresh = async () => {
+  setRefreshing(true);
+  try {
+    await fetchServices();
+    if (userObj) {
+      await fetchTestimonials();
+    }
+  } catch (error) {
+    console.error('Refresh error:', error);
+  } finally {
+    setRefreshing(false);
+  }
+};
+
   return {
     // Search related
     searchQuery,
@@ -153,9 +170,11 @@ export const useHomeScreen = () => {
     displayName,
     servicesData,
     userObj,
+    refreshing,
     
     // Handlers
     handleServicePress,
     openImageModal,
+     onRefresh,  
   };
 };
