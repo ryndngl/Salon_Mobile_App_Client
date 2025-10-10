@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useFavorites } from '../context/FavoritesContext';
 import { extractImages } from '../utils/imageHelper';
+import { servicesAPI } from '../services/servicesAPI'; // ✅ ADD THIS
 
 export const useServiceDetail = () => {
   const route = useRoute();
@@ -15,6 +16,7 @@ export const useServiceDetail = () => {
   const [service, setService] = useState(passedService || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false); // ✅ ADD THIS
 
   // Service type detection
   const isHairCut = service?.name?.trim().toLowerCase() === 'hair cut';
@@ -31,19 +33,44 @@ export const useServiceDetail = () => {
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [viewerImageSource, setViewerImageSource] = useState(null);
 
-  // Update selected category when service changes
-  useEffect(() => {
-    if (service) {
-      const newCategory = isHairCut ? 'Men' : (isHairColor ? 'Root Touch Up' : null);
-      setSelectedCategory(newCategory);
-    }
-  }, [service, isHairCut, isHairColor]);
+ //  NEW CODE - Only set category on INITIAL mount, not on refresh
+useEffect(() => {
+  // Only set default category if there's no selected category yet
+  if (service && !selectedCategory) {
+    const newCategory = isHairCut ? 'Men' : (isHairColor ? 'Root Touch Up' : null);
+    setSelectedCategory(newCategory);
+  }
+}, [service?.name]); // Only trigger when service NAME changes, not the whole object
 
-  // Filter styles based on category
+  // ADD THIS - Refresh function
+  const onRefresh = async () => {
+    if (!service?.name) return;
+    
+    setRefreshing(true);
+    try {
+      const updatedService = await servicesAPI.getServiceByName(service.name);
+      setService(updatedService);
+      console.log('✅ Service refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing service:', error);
+      setError(error.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Filter styles based on category AND isActive status
   const filteredStyles = service?.styles?.filter((style) => {
+    // Filter out disabled styles (hide them in mobile app)
+    if (style.isActive === false) {
+      return false;
+    }
+    
+    // Filter by category for Hair Cut and Hair Color
     if (isHairCut || isHairColor) {
       return style.category === selectedCategory;
     }
+    
     return true;
   }) || [];
 
@@ -119,6 +146,10 @@ export const useServiceDetail = () => {
     viewerImageSource,
     openImageViewer,
     closeImageViewer,
+    
+    // ADD THIS - Refresh state
+    refreshing,
+    onRefresh,
     
     // Actions
     goToBooking,
