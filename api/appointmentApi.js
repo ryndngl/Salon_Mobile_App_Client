@@ -1,7 +1,7 @@
 // api/appointmentApi.js
 import { API_BASE_URL, API_ENDPOINTS } from './config';
 
-// ✅ HELPER FUNCTIONS: Format data for backend
+// HELPER FUNCTIONS: Format data for backend
 
 /**
  * Convert date string "MM/DD/YYYY" to ISO format "YYYY-MM-DD"
@@ -10,15 +10,18 @@ const formatDateForBackend = (dateString) => {
   try {
     // Handle if already a Date object
     if (dateString instanceof Date) {
-      return dateString.toISOString().split('T')[0];
+      const year = dateString.getFullYear();
+      const month = String(dateString.getMonth() + 1).padStart(2, '0');
+      const day = String(dateString.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
     
-    // Parse "MM/DD/YYYY" format
+    // ✅ FIXED: Parse "MM/DD/YYYY" format correctly
     const [month, day, year] = dateString.split('/');
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   } catch (error) {
     console.error('Date formatting error:', error);
-    return dateString; // Return as-is if parsing fails
+    return dateString;
   }
 };
 
