@@ -42,18 +42,14 @@ export default function TokenEntryScreen({
               <Ionicons name="arrow-back-outline" size={24} color="#d13f3f" />
             </TouchableOpacity>
 
-            <Text style={styles.tokenTitle}>Enter Reset Token</Text>
+            <Text style={styles.tokenTitle}>Enter Reset Code</Text>
             <Text style={styles.tokenSubtitle}>
-              Check your email and enter the token we sent you.
+              Check your email and enter the code we sent you.
             </Text>
 
             <View style={styles.tokenInputSection}>
-              <Text style={styles.tokenInputLabel}>
-                Enter the token from your email:
-              </Text>
               <TextInput
                 style={styles.tokenTextInput}
-                placeholder="Paste token here..."
                 placeholderTextColor="#888"
                 value={manualToken}
                 onChangeText={setManualToken}
