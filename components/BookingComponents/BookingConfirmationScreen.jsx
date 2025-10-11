@@ -14,14 +14,14 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useBooking } from "../../context/BookingContext";
-import { useAuth } from "../../context/AuthContext"; // ADD THIS
-import { appointmentApi } from "../../api/appointmentApi"; // ADD THIS
+import { useAuth } from "../../context/AuthContext"; 
+import { appointmentApi } from "../../api/appointmentApi"; 
 
 const BookingConfirmationScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { addBooking } = useBooking();
-  const { user } = useAuth(); // ADD THIS - Get user info
+  const { user } = useAuth(); 
   
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // ADD THIS - Loading state
@@ -39,91 +39,92 @@ const BookingConfirmationScreen = () => {
     totalprice,
     status,
   } = bookingDetails || {};
+// UPDATED: Handle final confirmation with API call
+const handleFinalConfirm = async () => {
+  try {
+    setIsLoading(true);
 
-  // UPDATED: Handle final confirmation with API call
-  const handleFinalConfirm = async () => {
-    try {
-      setIsLoading(true);
+    //  FIXED: Prepare appointment data with FULL service details
+    const appointmentData = {
+      clientId: user?.id || user?._id,
+      clientName: user?.fullName || user?.name || name,
+      email: user?.email || "N/A",
+      phone: user?.phone || "N/A",
+      services: [{
+        name: serviceName,
+        category: category || "",
+        style: style || "",
+        price: price || 0
+      }],
+      date: date,
+      time: time,
+      modeOfPayment: paymentMethod || "Cash",
+    };
 
-      // Prepare appointment data for backend
-      const appointmentData = {
-        clientId: user?.id || user?._id, // User ID from AuthContext
-        clientName: user?.fullName || user?.name || name,
-        email: user?.email || "N/A",
-        phone: user?.phone || "N/A",
-        services: [serviceName], // Backend expects array
-        date: date, // Format: "YYYY-MM-DD"
-        time: time, // Format: "10:00 AM"
-        modeOfPayment: paymentMethod || "Cash",
+    console.log("Sending appointment data:", appointmentData);
+
+    // Call API to create appointment
+    const response = await appointmentApi.createAppointment(appointmentData);
+
+    if (response.success) {
+      // Success! Save to local context as well (for immediate display)
+      const bookingData = {
+        name: appointmentData.clientName,
+        serviceName,
+        category,
+        style,
+        date,
+        time,
+        paymentMethod,
+        price,
+        totalprice,
+        status: "pending",
+        _id: response.data?._id,
       };
 
-      console.log("Sending appointment data:", appointmentData);
+      addBooking(bookingData);
+      setModalVisible(false);
 
-      // Call API to create appointment
-      const response = await appointmentApi.createAppointment(appointmentData);
-
-      if (response.success) {
-        // Success! Save to local context as well (for immediate display)
-        const bookingData = {
-          name: appointmentData.clientName,
-          serviceName,
-          category,
-          style,
-          date,
-          time,
-          paymentMethod,
-          price,
-          totalprice,
-          status: "pending",
-          _id: response.data?._id, // Save the backend ID
-        };
-
-        addBooking(bookingData);
-        setModalVisible(false);
-
-        // Show success message
-        Alert.alert(
-          "Success! ✅",
-          "Your appointment has been confirmed. You will receive a confirmation shortly.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                navigation.navigate("MainTabs", {
-                  screen: "Bookings",
-                  params: { bookingDetails: bookingData },
-                });
-              },
-            },
-          ]
-        );
-      } else {
-        // API call failed
-        throw new Error(response.message || "Failed to create appointment");
-      }
-    } catch (error) {
-      console.error("Booking confirmation error:", error);
-      
-      // Show error message
+      // Show success message
       Alert.alert(
-        "Booking Failed ❌",
-        error.message || "Unable to confirm your appointment. Please try again or contact support.",
+        "Success! ",
+        "Your appointment has been confirmed. You will receive a confirmation shortly.",
         [
           {
-            text: "Retry",
-            onPress: () => handleFinalConfirm(),
-          },
-          {
-            text: "Cancel",
-            style: "cancel",
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("MainTabs", {
+                screen: "Bookings",
+                params: { bookingDetails: bookingData },
+              });
+            },
           },
         ]
       );
-    } finally {
-      setIsLoading(false);
+    } else {
+      throw new Error(response.message || "Failed to create appointment");
     }
-  };
-
+  } catch (error) {
+    console.error("Booking confirmation error:", error);
+    
+    Alert.alert(
+      "Booking Failed ",
+      error.message || "Unable to confirm your appointment. Please try again or contact support.",
+      [
+        {
+          text: "Retry",
+          onPress: () => handleFinalConfirm(),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <>
       <StatusBar
