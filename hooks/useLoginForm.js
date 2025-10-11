@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useBooking } from '../context/BookingContext'; // ✅ IMPORT BookingContext
 
 export const useLoginForm = () => {
   const navigation = useNavigation();
   const { login, setUser, setIsAuthenticated } = useAuth();
+  const { fetchUserBookings } = useBooking(); // ✅ Get fetchUserBookings function
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +29,13 @@ export const useLoginForm = () => {
          
       if (result.success) {
         showSuccessModal();
+
+        // ✅ FETCH USER BOOKINGS from database
+        const userId = result.user.id || result.user._id;
+        if (userId) {
+          console.log('📥 Fetching bookings for user:', userId);
+          await fetchUserBookings(userId);
+        }
 
         setTimeout(() => {
           hideSuccessModal();
