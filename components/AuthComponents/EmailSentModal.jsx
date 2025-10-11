@@ -27,10 +27,7 @@ export default function EmailSentModal({
           />
           <Text style={styles.successText}>Email Sent!</Text>
           <Text style={styles.successSubText}>
-            Check your email for the reset token.
-          </Text>
-          <Text style={styles.successInstructions}>
-            • Copy the token from your email{'\n'}
+            Check your email for the reset code.
           </Text>
         </Animated.View>
       </View>
