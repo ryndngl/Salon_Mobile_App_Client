@@ -124,7 +124,7 @@ export const useBookingForm = () => {
       serviceName,
       category: isHairCut || isHairColor ? category : "",
       style: style || "",
-      date: date.toLocaleDateString(),
+      date: date.toLocaleDateString('en-US'),
       time: selectedTime,
       price: price,
       status: "pending",
