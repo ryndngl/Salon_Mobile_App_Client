@@ -1,8 +1,10 @@
-import React from "react";
-import { StyleSheet, FlatList, SafeAreaView, View } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, FlatList, SafeAreaView, View, RefreshControl } from "react-native";
 
 // Import custom hook
 import { useBookingManagement } from "../../hooks";
+import { useBooking } from "../../context/BookingContext"; 
+import { useAuth } from "../../context/AuthContext"; 
 
 // Import components
 import BookingHeader from "./BookingHeader";
@@ -14,6 +16,10 @@ import CancelBookingModal from "./CancelBookingModal";
 import DeleteBookingModal from "./DeleteBookingModal";
 
 export default function BookingScreen() {
+  const { user } = useAuth(); 
+  const { fetchUserBookings, isLoadingBookings } = useBooking();  
+  const [refreshing, setRefreshing] = useState(false); 
+
   // Custom hook
   const {
     selectedTab,
@@ -30,6 +36,14 @@ export default function BookingScreen() {
     confirmDelete,
     closeDeleteModal,
   } = useBookingManagement();
+
+  const onRefresh = async () => {
+    if (!user?.id) return;
+    
+    setRefreshing(true);
+    await fetchUserBookings(user.id); 
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -62,6 +76,15 @@ export default function BookingScreen() {
               onDelete={handleDeleteBooking}
             />
           )}
+        
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing || isLoadingBookings}
+              onRefresh={onRefresh}
+              colors={['#7a0000']} // Android
+              tintColor="#7a0000" // iOS
+            />
+          }
         />
       ) : (
         <EmptyState selectedTab={selectedTab} />
