@@ -17,8 +17,8 @@ const HomeContent = ({ displayName, loading, onServicePress, userObj, refreshing
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#007d3f']}
-          tintColor="#007d3f"
+          colors={['#7a0000']}
+          tintColor="#7a0000"
         />
       }
     >

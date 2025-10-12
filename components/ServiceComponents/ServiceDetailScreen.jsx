@@ -33,8 +33,8 @@ export default function ServiceDetailScreen() {
     handleToggleFavorite,
     checkIsFavorite,
     hasMultipleImages,
-    refreshing, // ✅ ADD THIS
-    onRefresh,  // ✅ ADD THIS
+    refreshing, 
+    onRefresh,  
   } = useServiceDetail();
 
   // Error state - simple check lang
@@ -81,8 +81,8 @@ export default function ServiceDetailScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#007d3f']} // Android - green color
-            tintColor="#007d3f"  // iOS - green color
+            colors={['#7a0000']} 
+            tintColor="#7a0000"  
           />
         }
       >
