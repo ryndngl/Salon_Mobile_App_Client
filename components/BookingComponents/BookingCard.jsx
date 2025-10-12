@@ -11,15 +11,17 @@ export default function BookingCard({
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
-        return '#f39c12';
+        return '#f39c12'; // Orange
       case 'confirmed':
-        return '#27ae60'; 
+        return '#27ae60'; // Green for Approved
       case 'cancelled':
-        return '#e74c3c';
+        return '#e74c3c'; // Red for user-cancelled
+      case 'declined':
+        return '#c0392b'; // Dark red for admin-declined
       case 'completed':
-        return '#3498db';
+        return '#3498db'; // Blue
       default:
-        return '#95a5a6';
+        return '#95a5a6'; // Gray
     }
   };
 
@@ -31,6 +33,8 @@ export default function BookingCard({
         return 'checkmark-circle-outline';
       case 'cancelled':
         return 'close-circle-outline';
+      case 'declined':
+        return 'close-circle-outline';
       case 'completed':
         return 'checkmark-done-circle-outline';
       default:
@@ -38,10 +42,16 @@ export default function BookingCard({
     }
   };
 
-  //  NEW FUNCTION: Display text based on status
+  // ✅ UPDATED: Display text based on status
   const getStatusDisplayText = (status) => {
     if (status?.toLowerCase() === 'confirmed') {
-      return 'Approved'; 
+      return 'Approved'; // Show "Approved" instead of "Confirmed"
+    }
+    if (status?.toLowerCase() === 'declined') {
+      return 'Declined'; // Show "Declined" in proper case
+    }
+    if (status?.toLowerCase() === 'cancelled') {
+      return 'Cancelled'; // Show "Cancelled" in proper case
     }
     return status;
   };
@@ -57,7 +67,7 @@ export default function BookingCard({
         {/* Only show status badge if NOT in Cancelled tab */}
         {selectedTab !== "Cancelled" && (
           <Text style={[styles.statusTextOnly, { color: getStatusColor(item.status) }]}>
-            {getStatusDisplayText(item.status)} {/* ✅ CHANGED: Display "Approved" */}
+            {getStatusDisplayText(item.status)}
           </Text>
         )}
       </View>
@@ -101,19 +111,19 @@ export default function BookingCard({
         </View>
         <View style={styles.priceSection}>
           <Text style={styles.priceLabel}>Price</Text>
-          <Text style={styles.priceValue}>{item.price}</Text>
+          <Text style={styles.priceValue}>₱{item.price}</Text>
         </View>
       </View>
 
       {item.totalprice && (
         <View style={styles.totalSection}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>{item.totalprice}</Text>
+          <Text style={styles.totalValue}>₱{item.totalprice || item.price}</Text>
         </View>
       )}
 
       {/* Action Buttons */}
-      {selectedTab === "Upcoming" && item.status === "pending" && (
+      {selectedTab === "Upcoming" && item.status?.toLowerCase() === "pending" && (
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => onCancel(item)}
