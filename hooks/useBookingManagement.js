@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useBooking } from '../context/BookingContext';
+import { appointmentService } from '../services/appointmentService'; 
 
 export const useBookingManagement = () => {
   const { bookings, setBookings } = useBooking();
@@ -21,12 +22,12 @@ export const useBookingManagement = () => {
     // Normalize status to lowercase for comparison
     const status = item.status?.toLowerCase() || '';
     
-    // ✅ UPCOMING: Include both Pending and Confirmed
+    // ✅ UPCOMING: Include Pending, Confirmed, AND Declined
     if (selectedTab === "Upcoming") {
-      return status === "pending" || status === "confirmed";
+      return status === "pending" || status === "confirmed" || status === "declined";
     }
     
-    // ✅ CANCELLED: Only cancelled bookings
+    // ✅ CANCELLED: Only user-cancelled bookings
     if (selectedTab === "Cancelled") {
       return status === "cancelled";
     }
@@ -50,18 +51,39 @@ export const useBookingManagement = () => {
     setCancelModalVisible(true);
   };
 
-  const confirmCancelBooking = () => {
-    if (selectedBooking) {
+  const confirmCancelBooking = async () => {
+  if (selectedBooking) {
+    try {
+      console.log('🔄 Cancelling booking:', selectedBooking.id);
+      console.log('📋 Full booking object:', selectedBooking); // ✅ Debug log
+      
+      // ✅ Validate ID before calling API
+      if (!selectedBooking.id) {
+        console.error('❌ Booking ID is undefined!');
+        alert('Error: Booking ID is missing. Please refresh and try again.');
+        return;
+      }
+      
+      // ✅ Call API to update status in database
+      await appointmentService.cancelAppointment(selectedBooking.id);
+      
+      console.log('✅ Booking cancelled successfully');
+      
+      // ✅ Update local state - compare by ID!
       setBookings((prev) =>
         prev.map((b) =>
-          b === selectedBooking ? { ...b, status: "cancelled" } : b
+          b.id === selectedBooking.id ? { ...b, status: "cancelled" } : b
         )
       );
       setSelectedTab("Cancelled");
+    } catch (error) {
+      console.error('❌ Cancel booking error:', error);
+      alert('Failed to cancel booking. Please try again.');
     }
-    setCancelModalVisible(false);
-    setSelectedBooking(null);
-  };
+  }
+  setCancelModalVisible(false);
+  setSelectedBooking(null);
+};
 
   const closeCancelModal = () => {
     setCancelModalVisible(false);
@@ -84,7 +106,8 @@ export const useBookingManagement = () => {
     if (actionType === "deleteSingle" && bookingToDelete) {
       setBookings((prev) => prev.filter((b) => b !== bookingToDelete));
     } else if (actionType === "deleteAll") {
-      setBookings((prev) => prev.filter((b) => b.status !== "cancelled"));
+      // ✅ FIXED: Only delete "cancelled" status, NOT declined
+      setBookings((prev) => prev.filter((b) => b.status?.toLowerCase() !== "cancelled"));
     }
     setDeleteModalVisible(false);
     setBookingToDelete(null);
