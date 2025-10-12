@@ -14,12 +14,28 @@ export const useBookingManagement = () => {
   const [actionType, setActionType] = useState(null);
   const [bookingToDelete, setBookingToDelete] = useState(null);
 
-  // Filter bookings based on selected tab
+  // ✅ FIXED: Filter bookings based on selected tab
   const filteredBookings = bookings.filter((item) => {
     if (!item.paymentMethod || !item.name || !item.date || !item.time) return false;
-    if (selectedTab === "Upcoming") return item.status === "pending";
-    if (selectedTab === "Cancelled") return item.status === "cancelled";
-    if (selectedTab === "Completed") return item.status === "completed";
+    
+    // Normalize status to lowercase for comparison
+    const status = item.status?.toLowerCase() || '';
+    
+    // ✅ UPCOMING: Include both Pending and Confirmed
+    if (selectedTab === "Upcoming") {
+      return status === "pending" || status === "confirmed";
+    }
+    
+    // ✅ CANCELLED: Only cancelled bookings
+    if (selectedTab === "Cancelled") {
+      return status === "cancelled";
+    }
+    
+    // ✅ COMPLETED: Only completed bookings
+    if (selectedTab === "Completed") {
+      return status === "completed";
+    }
+    
     return true;
   });
 
