@@ -13,7 +13,7 @@ export default function BookingCard({
       case 'pending':
         return '#f39c12';
       case 'confirmed':
-        return '#27ae60';
+        return '#27ae60'; 
       case 'cancelled':
         return '#e74c3c';
       case 'completed':
@@ -38,6 +38,14 @@ export default function BookingCard({
     }
   };
 
+  //  NEW FUNCTION: Display text based on status
+  const getStatusDisplayText = (status) => {
+    if (status?.toLowerCase() === 'confirmed') {
+      return 'Approved'; 
+    }
+    return status;
+  };
+
   return (
     <View style={styles.card}>
       {/* Header Section */}
@@ -49,7 +57,7 @@ export default function BookingCard({
         {/* Only show status badge if NOT in Cancelled tab */}
         {selectedTab !== "Cancelled" && (
           <Text style={[styles.statusTextOnly, { color: getStatusColor(item.status) }]}>
-            {item.status}
+            {getStatusDisplayText(item.status)} {/* ✅ CHANGED: Display "Approved" */}
           </Text>
         )}
       </View>
@@ -157,6 +165,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#2d3436",
     marginLeft: 8,
+  },
+  statusTextOnly: {
+    fontSize: 14,
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
   statusBadge: {
     flexDirection: "row",
