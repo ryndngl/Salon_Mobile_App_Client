@@ -81,8 +81,8 @@ export default function BookingScreen() {
             <RefreshControl
               refreshing={refreshing || isLoadingBookings}
               onRefresh={onRefresh}
-              colors={['#7a0000']} // Android
-              tintColor="#7a0000" // iOS
+              colors={['#7a0000']} 
+              tintColor="#7a0000" 
             />
           }
         />

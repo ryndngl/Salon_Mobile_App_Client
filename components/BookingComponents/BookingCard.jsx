@@ -56,6 +56,22 @@ export default function BookingCard({
     return status;
   };
 
+  // ✅ NEW: Format price to always show peso sign
+  const formatPrice = (price) => {
+    if (!price) return '₱0';
+    
+    // Convert to string to handle both string and number types
+    const priceStr = String(price);
+    
+    // Check if peso sign already exists
+    if (priceStr.includes('₱')) {
+      return priceStr;
+    }
+    
+    // Add peso sign if it doesn't exist
+    return `₱${priceStr}`;
+  };
+
   return (
     <View style={styles.card}>
       {/* Header Section */}
@@ -111,14 +127,14 @@ export default function BookingCard({
         </View>
         <View style={styles.priceSection}>
           <Text style={styles.priceLabel}>Price</Text>
-          <Text style={styles.priceValue}>₱{item.price}</Text>
+          <Text style={styles.priceValue}>{formatPrice(item.price)}</Text>
         </View>
       </View>
 
       {item.totalprice && (
         <View style={styles.totalSection}>
           <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>₱{item.totalprice || item.price}</Text>
+          <Text style={styles.totalValue}>{formatPrice(item.totalprice || item.price)}</Text>
         </View>
       )}
 
