@@ -1,4 +1,4 @@
-// screens/HomeScreen/components/HomeContent.jsx
+// screens/HomeScreen/Components/HomeContent.jsx
 import React from 'react';
 import { ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -7,11 +7,11 @@ import Banner from './Banner';
 import ServicesGrid from './ServicesGrid';
 import TestimonialsSection from './TestimonialsSection';
 
-const HomeContent = ({ displayName, loading, onServicePress, userObj, refreshing, onRefresh }) => {
+const HomeContent = ({ displayName, loading, onServicePress, userObj, refreshing, onRefresh, unreadCount }) => {
   const navigation = useNavigation();
 
   return (
-    <ScrollView 
+    <ScrollView
       contentContainerStyle={styles.container}
       refreshControl={
         <RefreshControl
@@ -22,9 +22,10 @@ const HomeContent = ({ displayName, loading, onServicePress, userObj, refreshing
         />
       }
     >
-      <Header
+      <Header 
         displayName={displayName}
         onNotificationPress={() => navigation.navigate("NotificationScreen")}
+        unreadCount={unreadCount}
       />
       <Banner />
       <ServicesGrid
