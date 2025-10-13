@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const Header = ({ displayName, onNotificationPress }) => {
+const Header = ({ displayName, onNotificationPress, unreadCount = 0 }) => {
   return (
     <View style={styles.container}>
       <View style={styles.left}>
@@ -15,7 +15,17 @@ const Header = ({ displayName, onNotificationPress }) => {
       <TouchableOpacity onPress={onNotificationPress}>
         <View style={{ position: "relative" }}>
           <Icon name="notifications" size={31} color="#ffcc00" />
-          <View style={styles.notifBadge} />
+          
+          {/*  CONDITIONAL BADGE - Show only if unreadCount > 0 */}
+          {unreadCount > 0 && (
+            <View style={styles.notifBadge}>
+              {unreadCount > 9 ? (
+                <Text style={styles.badgeText}>9+</Text>
+              ) : (
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              )}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     </View>
@@ -48,14 +58,22 @@ const styles = StyleSheet.create({
   },
   notifBadge: {
     position: "absolute",
-    top: -2,
-    right: -2,
-    backgroundColor: "red",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1,
+    top: -4,
+    right: -4,
+    backgroundColor: "#e74c3c",
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
     borderColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
 
