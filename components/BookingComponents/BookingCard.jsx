@@ -11,15 +11,15 @@ export default function BookingCard({
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
-        return '#f39c12'; // Orange
+        return '#f39c12'; // Orange for pending
       case 'confirmed':
-        return '#27ae60'; // Green for Approved
+        return '#3498db'; // blue for Approved
       case 'cancelled':
         return '#e74c3c'; // Red for user-cancelled
       case 'declined':
         return '#c0392b'; // Dark red for admin-declined
       case 'completed':
-        return '#3498db'; // Blue
+        return '#27ae60'; // green for completed
       default:
         return '#95a5a6'; // Gray
     }
