@@ -106,13 +106,6 @@ export const useHomeScreen = () => {
     const apiResponse = await response.json();
     const selectedService = apiResponse.data || apiResponse;
 
-    // ADD THIS DEBUG LOG
-    console.log('=== SERVICE DATA ===');
-    console.log('Service name:', selectedService.name);
-    console.log('Has categories:', !!selectedService.categories);
-    console.log('Categories count:', selectedService.categories?.length);
-    console.log('Full service:', JSON.stringify(selectedService, null, 2));
-    console.log('==================');
 
     if (selectedService && selectedService.name) {
       navigation.navigate("ServiceDetailScreen", {
@@ -122,7 +115,7 @@ export const useHomeScreen = () => {
       Alert.alert("Service Not Found", "This service is not available yet.");
     }
   } catch (error) {
-    console.error('Error details:', error); // ADD THIS TOO
+    console.error('Error details:', error);
     Alert.alert("Error", "Failed to load service details. Please try again.");
   } finally {
     setLoading(false);
