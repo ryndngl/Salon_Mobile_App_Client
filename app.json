@@ -1,12 +1,11 @@
 {
   "expo": {
     "name": "SalonMobileApp",
-    "slug": "SalonMobileApp",
+    "slug": "SalonBookingApp",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true, 
     "scheme": "salonmobileapp",
     "icon": "./assets/icon.png",
     "splash": {
@@ -14,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.salonbookingapp",
@@ -22,14 +23,15 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "salonmobileapp",
-            "CFBundleURLSchemes": ["salonmobileapp", "exp"]
+            "CFBundleURLSchemes": [
+              "salonmobileapp"
+            ]
           }
         ]
       }
     },
     "android": {
       "package": "com.yourcompany.salonmobileapp",
-      "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff",
@@ -38,17 +40,13 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "data": [
-            {
-              "scheme": "salonmobileapp"
-            },
-            {
-              "scheme": "exp",
-              "host": "192.168.100.6",
-              "port": 19000
-            }
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": {
+            "scheme": "salonmobileapp"
+          }
         }
       ]
     },
@@ -59,6 +57,9 @@
       "eas": {
         "projectId": "3a58fc89-466d-42b2-94f0-0a8eda491334"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
