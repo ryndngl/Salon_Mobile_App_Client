@@ -20,7 +20,7 @@ export const useBookingForm = () => {
   const [style, setStyle] = useState(passedStyle);
   const [price, setPrice] = useState(passedPrice);
   const [name, setName] = useState("");
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(new Date()); // ✅ Auto-set to today
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
   const [nameError, setNameError] = useState("");
@@ -113,12 +113,14 @@ export const useBookingForm = () => {
     setSelectedTime(time);
   };
 
+  // ✅ UPDATED: Just prepare data and navigate (NO API call yet)
   const handleSubmit = () => {
     if (!isFormValid) {
       Alert.alert("Incomplete Form", "Please complete all fields correctly.");
       return;
     }
 
+    // Just prepare booking data for display
     const bookingData = {
       name,
       serviceName,
@@ -130,7 +132,7 @@ export const useBookingForm = () => {
       status: "pending",
     };
     
-    addBooking(bookingData);
+    // Navigate to summary WITHOUT creating booking yet
     navigation.navigate("BookingSummaryScreen", {
       bookingDetails: bookingData,
     });
