@@ -107,9 +107,11 @@ export default function BookingFormScreen() {
           onDateChange={handleDateChange}
         />
 
+        {/* ✅ UPDATED: Pass selectedDate prop */}
         <TimeSlotSelector
           selectedTime={selectedTime}
           onTimeSelect={handleTimeSelect}
+          selectedDate={date}
         />
 
         <BookingFormActions
