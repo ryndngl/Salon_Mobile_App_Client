@@ -24,7 +24,7 @@ const BookingConfirmationScreen = () => {
   const { user } = useAuth(); 
   
   const [modalVisible, setModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // ADD THIS - Loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   const { bookingDetails } = route.params || {};
   const {
@@ -39,92 +39,122 @@ const BookingConfirmationScreen = () => {
     totalprice,
     status,
   } = bookingDetails || {};
-// UPDATED: Handle final confirmation with API call
-const handleFinalConfirm = async () => {
-  try {
-    setIsLoading(true);
 
-    //  FIXED: Prepare appointment data with FULL service details
-    const appointmentData = {
-      clientId: user?.id || user?._id,
-      clientName: user?.fullName || user?.name || name,
-      email: user?.email || "N/A",
-      phone: user?.phone || "N/A",
-      services: [{
-        name: serviceName,
-        category: category || "",
-        style: style || "",
-        price: price || 0
-      }],
-      date: date,
-      time: time,
-      modeOfPayment: paymentMethod || "Cash",
-    };
+  // ✅ UPDATED: Handle final confirmation with conflict detection
+  const handleFinalConfirm = async () => {
+    try {
+      setIsLoading(true);
 
-    console.log("Sending appointment data:", appointmentData);
-
-    // Call API to create appointment
-    const response = await appointmentApi.createAppointment(appointmentData);
-
-    if (response.success) {
-      // Success! Save to local context as well (for immediate display)
-      const bookingData = {
-        name: appointmentData.clientName,
-        serviceName,
-        category,
-        style,
-        date,
-        time,
-        paymentMethod,
-        price,
-        totalprice,
-        status: "pending",
-        _id: response.data?._id,
+      // Prepare appointment data
+      const appointmentData = {
+        clientId: user?.id || user?._id,
+        clientName: user?.fullName || user?.name || name,
+        email: user?.email || "N/A",
+        phone: user?.phone || "N/A",
+        services: [{
+          name: serviceName,
+          category: category || "",
+          style: style || "",
+          price: price || 0
+        }],
+        date: date,
+        time: time,
+        modeOfPayment: paymentMethod || "Cash on Service",
       };
 
-      addBooking(bookingData);
-      setModalVisible(false);
+      console.log("Creating appointment:", appointmentData);
 
-      // Show success message
+      // ✅ Call API to create appointment
+      const response = await appointmentApi.createAppointment(appointmentData);
+
+      if (response.success) {
+        // ✅ Success! Add to local context
+        const bookingData = {
+          ...response.data,
+          name: appointmentData.clientName,
+          serviceName,
+          category,
+          style,
+          date,
+          time,
+          paymentMethod,
+          price,
+          totalprice,
+          status: "pending",
+          id: response.data?._id,
+          _id: response.data?._id,
+        };
+
+        addBooking(bookingData);
+        setModalVisible(false);
+
+        // Success message
+        Alert.alert(
+          "Success! 🎉",
+          "Your appointment has been confirmed. You will receive a notification once approved.",
+          [
+            {
+              text: "View Bookings",
+              onPress: () => {
+                navigation.navigate("MainTabs", {
+                  screen: "Bookings",
+                  params: { refresh: true },
+                });
+              },
+            },
+          ]
+        );
+      } else if (response.conflict) {
+        // ✅ Handle conflict - Time slot taken by another user
+        setModalVisible(false);
+        setIsLoading(false);
+        
+        Alert.alert(
+          "Time Slot Unavailable ⚠️",
+          `Sorry, the ${time} slot was just booked by another user. Please select a different time.`,
+          [
+            {
+              text: "Choose Another Time",
+              onPress: () => {
+                // Navigate back to booking form
+                navigation.navigate("BookingFormScreen", {
+                  editMode: true,
+                  ...bookingDetails
+                });
+              },
+            },
+          ]
+        );
+        return;
+      } else {
+        throw new Error(response.message || "Failed to create appointment");
+      }
+    } catch (error) {
+      console.error("Booking confirmation error:", error);
+      
+      setModalVisible(false);
+      setIsLoading(false);
+      
       Alert.alert(
-        "Success! ",
-        "Your appointment has been confirmed. You will receive a confirmation shortly.",
+        "Booking Failed ❌",
+        error.message || "Unable to confirm your appointment. Please try again.",
         [
           {
-            text: "OK",
-            onPress: () => {
-              navigation.navigate("MainTabs", {
-                screen: "Bookings",
-                params: { bookingDetails: bookingData },
-              });
-            },
+            text: "Try Again",
+            onPress: () => setModalVisible(true),
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => navigation.goBack(),
           },
         ]
       );
-    } else {
-      throw new Error(response.message || "Failed to create appointment");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Booking confirmation error:", error);
-    
-    Alert.alert(
-      "Booking Failed ",
-      error.message || "Unable to confirm your appointment. Please try again or contact support.",
-      [
-        {
-          text: "Retry",
-          onPress: () => handleFinalConfirm(),
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
+
   return (
     <>
       <StatusBar
@@ -208,7 +238,7 @@ const handleFinalConfirm = async () => {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* UPDATED MODAL: Added loading state */}
+        {/* Confirmation Modal */}
         <Modal
           visible={modalVisible}
           animationType="fade"
@@ -225,12 +255,19 @@ const handleFinalConfirm = async () => {
                   <Text style={styles.loadingText}>
                     Processing your booking...
                   </Text>
+                  <Text style={styles.loadingSubtext}>
+                    Please wait, checking availability...
+                  </Text>
                 </View>
               ) : (
                 // Confirmation dialog
                 <>
+                  <Text style={styles.modalTitle}>Confirm Payment</Text>
                   <Text style={styles.modalText}>
-                    Confirm payment via {paymentMethod}?
+                    You selected <Text style={styles.boldText}>{paymentMethod}</Text> as your payment method.
+                  </Text>
+                  <Text style={styles.modalSubtext}>
+                    Your appointment at <Text style={styles.boldText}>{time}</Text> will be reserved once confirmed.
                   </Text>
                   <View style={styles.modalButtons}>
                     <TouchableOpacity
@@ -320,20 +357,39 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 350,
   },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+    color: "#333",
+  },
   modalText: {
-    fontSize: 18,
+    fontSize: 16,
+    marginBottom: 10,
+    textAlign: "center",
+    color: "#555",
+  },
+  modalSubtext: {
+    fontSize: 14,
     marginBottom: 20,
     textAlign: "center",
+    color: "#666",
+  },
+  boldText: {
+    fontWeight: "bold",
+    color: "#333",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-around",
+    marginTop: 10,
   },
   cancelBtn: {
     backgroundColor: "#f5f5f5",
     borderColor: "#ddd",
     borderWidth: 1,
-    padding: 10,
+    padding: 12,
     borderRadius: 6,
     minWidth: 100,
     alignItems: "center",
@@ -344,7 +400,7 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     backgroundColor: "#4CAF50",
-    padding: 10,
+    padding: 12,
     borderRadius: 6,
     minWidth: 100,
     alignItems: "center",
@@ -353,7 +409,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  // NEW STYLES: Loading state
   loadingContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -362,6 +417,13 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     fontSize: 16,
+    color: "#333",
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  loadingSubtext: {
+    marginTop: 8,
+    fontSize: 14,
     color: "#666",
     textAlign: "center",
   },
