@@ -4,7 +4,8 @@ import { API_BASE_URL, API_ENDPOINTS } from './config';
 // HELPER FUNCTIONS: Format data for backend
 
 /**
- * Convert date string "MM/DD/YYYY" to ISO format "YYYY-MM-DD"
+ * Convert date string "MM/DD/YYYY" to ISO format "YYYY-MM-DDT00:00:00.000Z"
+ * Always sets time to midnight UTC to avoid timezone issues
  */
 const formatDateForBackend = (dateString) => {
   try {
@@ -13,12 +14,14 @@ const formatDateForBackend = (dateString) => {
       const year = dateString.getFullYear();
       const month = String(dateString.getMonth() + 1).padStart(2, '0');
       const day = String(dateString.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      // Return ISO string with midnight UTC time
+      return `${year}-${month}-${day}T00:00:00.000Z`;
     }
     
     // ✅ FIXED: Parse "MM/DD/YYYY" format correctly
     const [month, day, year] = dateString.split('/');
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    // Return ISO string with midnight UTC time
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`;
   } catch (error) {
     console.error('Date formatting error:', error);
     return dateString;
@@ -38,6 +41,54 @@ const cleanPrice = (price) => {
 };
 
 export const appointmentApi = {
+  /**
+   * NEW: Get available time slots for a specific date
+   * @param {Date|String} date - Date to check availability
+   * @returns {Promise<Object>} Response with available and booked slots
+   */
+  getAvailableSlots: async (date) => {
+    try {
+      // Format date to YYYY-MM-DD
+      const formattedDate = formatDateForBackend(date);
+      
+      console.log('Fetching available slots for:', formattedDate);
+
+      const response = await fetch(
+        `${API_BASE_URL}${API_ENDPOINTS.GET_AVAILABLE_SLOTS}?date=${formattedDate}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch available slots');
+      }
+
+      console.log('Available slots fetched:', data);
+      return {
+        success: true,
+        data: data.slots || {},
+        totalSlots: data.totalSlots || 0,
+        bookedSlots: data.bookedSlots || 0,
+        availableSlots: data.availableSlots || 0
+      };
+
+    } catch (error) {
+      console.error('Get available slots error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to load available slots',
+        data: { all: [], booked: [], available: [] },
+        error: error
+      };
+    }
+  },
+
   /**
    * Create new appointment
    * @param {Object} appointmentData - Appointment details
@@ -70,6 +121,16 @@ export const appointmentApi = {
       });
 
       const data = await response.json();
+
+      // ✅ Handle conflict error (409 - slot already taken)
+      if (response.status === 409) {
+        return {
+          success: false,
+          conflict: true,
+          message: data.message || 'This time slot is no longer available. Please choose another time.',
+          error: data
+        };
+      }
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create appointment');
